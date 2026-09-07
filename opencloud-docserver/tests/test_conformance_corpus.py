@@ -1,7 +1,7 @@
 """Borrow the World-Office ``wo-conformance`` corpus as round-trip coverage.
 
-The corpus lives in the sibling Rust crate
-``core/crates/wo-conformance/corpus/cases`` (30 real ``.docx`` documents
+The corpus lives in the wo-test-harness repo (crate ``wo-conformance``,
+``conformance/corpus/cases``; 30 real ``.docx`` documents
 covering bold/italic/fonts/alignment/spacing/page-breaks/tables/…).
 
 What we reuse vs. what we don't:
@@ -28,12 +28,30 @@ from docx import Document
 
 from src.editor.converter import docx_to_html, html_to_docx
 
-_CORPUS = os.path.normpath(
-    os.path.join(
-        os.path.dirname(__file__), "..", "..", "core", "crates",
-        "wo-conformance", "corpus", "cases",
-    )
-)
+def _find_corpus() -> str | None:
+    """Locate the wo-conformance corpus (moved to the wo-test-harness repo).
+
+    Resolution order (first hit wins):
+      1. WO_CONFORMANCE_CORPUS env var (explicit path to corpus/cases)
+      2. sibling wo-test-harness checkout next to this server repo
+      3. legacy in-repo path (this repo used to embed the crate)
+    Returns None (-> tests skip) when no corpus is present in this checkout.
+    """
+    env = os.environ.get("WO_CONFORMANCE_CORPUS")
+    if env and os.path.isdir(env):
+        return env
+    here = os.path.dirname(__file__)
+    candidates = [
+        os.path.join(here, "..", "..", "..", "wo-test-harness", "conformance", "corpus", "cases"),
+        os.path.join(here, "..", "..", "core", "crates", "wo-conformance", "corpus", "cases"),
+    ]
+    for c in candidates:
+        if os.path.isdir(c):
+            return os.path.normpath(c)
+    return None
+
+
+_CORPUS = _find_corpus()
 
 
 def _docx_files() -> list[str]:

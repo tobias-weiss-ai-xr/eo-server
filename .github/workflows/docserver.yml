@@ -4,14 +4,10 @@ on:
   pull_request:
     paths:
       - "opencloud-docserver/**"
-      - "scripts/harness-graph/**"
-      - "scripts/tf-test-harness/**"
   push:
     branches: [main]
     paths:
       - "opencloud-docserver/**"
-      - "scripts/harness-graph/**"
-      - "scripts/tf-test-harness/**"
 
 concurrency:
   group: docserver-${{ github.ref }}
@@ -48,16 +44,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The register + harness live in wo-test-harness (moved out of this repo).
+      # seed.py inventories THIS server checkout via WO_SERVER_DIR.
+      - name: Check out wo-test-harness
+        uses: actions/checkout@v4
+        with:
+          repository: World-Office/wo-test-harness
+          path: wo-test-harness
+
       - name: Install PyYAML
         run: python3 -m pip install --break-system-packages pyyaml
 
       - name: Graph drift gate
-        run: python3 scripts/harness-graph/seed.py --check
+        env:
+          WO_SERVER_DIR: ${{ github.workspace }}
+        run: python3 wo-test-harness/harness-graph/seed.py --check
 
       - name: Every feature covered or divergence-documented
+        env:
+          WO_SERVER_DIR: ${{ github.workspace }}
         run: |
-          IDS=$(grep -oE 'F-[0-9]{3}' scripts/harness-graph/features.yaml | sort -u | tr '\n' ' ')
-          python3 scripts/harness-graph/check-register.py $IDS
+          IDS=$(grep -oE 'F-[0-9]{3}' wo-test-harness/harness-graph/features.yaml | sort -u | tr '\n' ' ')
+          python3 wo-test-harness/harness-graph/check-register.py $IDS
 
       - name: Unified test harness self-test (TH-001 gate)
-        run: bash scripts/tf-test-harness/test-harness.sh --self-test
+        env:
+          WO_SERVER_DIR: ${{ github.workspace }}
+        run: bash wo-test-harness/tf-test-harness/test-harness.sh --self-test

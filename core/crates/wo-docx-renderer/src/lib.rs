@@ -4,13 +4,11 @@
 //! This crate provides the rendering pipeline that transforms DOCX
 //! document models into visual output via the wo-renderer backend.
 
-pub mod conformance;
 pub mod layout;
 pub mod model;
 pub mod pipeline;
 pub mod roundtrip;
 
-pub use conformance::DocxConformanceAdapter;
 pub use model::{RenderConfig, RenderOutput, RenderResult};
 pub use pipeline::DocxRenderPipeline;
 pub use roundtrip::DocxRendererRoundtrip;

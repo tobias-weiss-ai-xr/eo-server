@@ -173,7 +173,7 @@ def test_line_spacing_single_means_default():
 #
 # # NOTE: existing behaviour — Paragraph shading / borders are a documented
 # gap (see the divergence entry for the home.para shading feature in
-# scripts/harness-graph/features.yaml): there is no authoring surface and no
+# the wo-test-harness repo's harness-graph/features.yaml): there is no authoring surface and no
 # paragraph-level serialization in either direction. These checks pin the
 # current behaviour so a future implementation has to flip them deliberately.
 # They deliberately carry NO feature-id marker: that register entry stays

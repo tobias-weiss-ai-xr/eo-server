@@ -1,11 +1,19 @@
 {
   "_meta": {
-    "source": "scripts/tf-test-harness/ROADMAP.md",
+    "source": "tf-test-harness/ROADMAP.md",
     "description": "TaskFleet tasks for improving World-Office test harness",
     "task_count": 10,
     "category": "test-harness",
-    "priority_order": ["foundational", "quality-gates", "automation", "performance", "visibility"],
-    "notes": "These tasks implement the 10 harness improvements identified in the analysis. Each task has clear acceptance criteria and scope."
+    "priority_order": [
+      "foundational",
+      "quality-gates",
+      "automation",
+      "performance",
+      "visibility"
+    ],
+    "notes": "These tasks implement the 10 harness improvements identified in the analysis. They now target the wo-test-harness repo (moved out of this server repo Q2 2026): paths are wo-test-harness-repo-relative (tf-test-harness/, harness-graph/, conformance/). Run via run-harness-improvements.sh which resolves WO_TEST_HARNESS or a sibling checkout.",
+    "target_repo": "World-Office/wo-test-harness",
+    "paths": "repo-relative to wo-test-harness root (was scripts/tf-test-harness, scripts/harness-graph before the move)"
   },
   "tasks": [
     {
@@ -16,15 +24,18 @@
       "priority": 10,
       "deps": [],
       "scope": [
-        "scripts/tf-test-harness/test-harness.sh",
-        "scripts/tf-test-harness/README.md",
-        "scripts/tf-test-harness/lib/",
-        "scripts/tf-test-harness/config/"
+        "tf-test-harness/test-harness.sh",
+        "tf-test-harness/README.md",
+        "tf-test-harness/lib/",
+        "tf-test-harness/config/"
       ],
-      "accept": "bash scripts/tf-test-harness/test-harness.sh --self-test",
+      "accept": "bash tf-test-harness/test-harness.sh --self-test",
       "acceptance_prose": "Self-test passes (29 tests), --status shows task board, --help shows usage. Script uses TaskFleet libs (common.sh, status.sh, worktree.sh).",
       "manual": false,
-      "tags": ["unified-orchestrator", "foundational"],
+      "tags": [
+        "unified-orchestrator",
+        "foundational"
+      ],
       "estimated_hours": 4
     },
     {
@@ -33,15 +44,21 @@
       "title": "Generate test tasks from Rust workspace and E2E suite",
       "section": "Priority 1 - Foundational",
       "priority": 20,
-      "deps": ["TH-001"],
-      "scope": [
-        "scripts/tf-test-harness/scripts/generate-tests.py",
-        "scripts/tf-test-harness/config/tasks.json"
+      "deps": [
+        "TH-001"
       ],
-      "accept": "python3 scripts/tf-test-harness/scripts/generate-tests.py --check && test $(jq '.tasks | length' scripts/tf-test-harness/config/tasks.json) -gt 900",
+      "scope": [
+        "tf-test-harness/scripts/generate-tests.py",
+        "tf-test-harness/config/tasks.json"
+      ],
+      "accept": "python3 tf-test-harness/scripts/generate-tests.py --check && test $(jq '.tasks | length' tf-test-harness/config/tasks.json) -gt 900",
       "acceptance_prose": "generate-tests.py discovers all Rust unit tests (930+), E2E tests (100+), conformance tests (30), and creates valid JSON task definitions. --check validates all task definitions.",
       "manual": false,
-      "tags": ["task-generation", "discovery", "foundational"],
+      "tags": [
+        "task-generation",
+        "discovery",
+        "foundational"
+      ],
       "estimated_hours": 6
     },
     {
@@ -54,12 +71,16 @@
       "scope": [
         ".forgejo/workflows/ci.yml",
         ".forgejo/workflows/e2e.yml",
-        "scripts/harness-graph/seed.py"
+        "harness-graph/seed.py"
       ],
-      "accept": "python3 scripts/harness-graph/seed.py --check",
+      "accept": "python3 harness-graph/seed.py --check",
       "acceptance_prose": "CI workflow includes harness graph check. seed.py --check exits 0 when graph.json is current. CI fails if graph is stale.",
       "manual": false,
-      "tags": ["harness-graph", "ci-integration", "quality-gate"],
+      "tags": [
+        "harness-graph",
+        "ci-integration",
+        "quality-gate"
+      ],
       "estimated_hours": 2
     },
     {
@@ -68,15 +89,22 @@
       "title": "Add test parallelization support",
       "section": "Priority 2 - Quality Gates",
       "priority": 40,
-      "deps": ["TH-001", "TH-002"],
-      "scope": [
-        "scripts/tf-test-harness/test-harness.sh",
-        "scripts/tf-test-harness/lib/parallel.sh"
+      "deps": [
+        "TH-001",
+        "TH-002"
       ],
-      "accept": "TF_MAX_PARALLEL=4 timeout 120 bash scripts/tf-test-harness/test-harness.sh --category rust --max-parallel 4 --fast; time TF_MAX_PARALLEL=8 timeout 180 bash scripts/tf-test-harness/test-harness.sh --category rust --max-parallel 8 --fast",
+      "scope": [
+        "tf-test-harness/test-harness.sh",
+        "tf-test-harness/lib/parallel.sh"
+      ],
+      "accept": "TF_MAX_PARALLEL=4 timeout 120 bash tf-test-harness/test-harness.sh --category rust --max-parallel 4 --fast; time TF_MAX_PARALLEL=8 timeout 180 bash tf-test-harness/test-harness.sh --category rust --max-parallel 8 --fast",
       "acceptance_prose": "Parallel execution runs tests concurrently using TF_MAX_PARALLEL. Rust category tests complete in < 2 minutes with 8 parallel workers vs > 5 minutes with 1 worker.",
       "manual": false,
-      "tags": ["parallelization", "performance", "quality-gate"],
+      "tags": [
+        "parallelization",
+        "performance",
+        "quality-gate"
+      ],
       "estimated_hours": 4
     },
     {
@@ -85,16 +113,22 @@
       "title": "Add coverage reporting with cargo-llvm-cov",
       "section": "Priority 2 - Quality Gates",
       "priority": 50,
-      "deps": ["TH-001"],
+      "deps": [
+        "TH-001"
+      ],
       "scope": [
-        "scripts/tf-test-harness/lib/coverage.sh",
-        "scripts/tf-test-harness/test-harness.sh",
+        "tf-test-harness/lib/coverage.sh",
+        "tf-test-harness/test-harness.sh",
         ".forgejo/workflows/ci.yml"
       ],
-      "accept": "bash scripts/tf-test-harness/test-harness.sh --category rust --coverage --threshold 70",
+      "accept": "bash tf-test-harness/test-harness.sh --category rust --coverage --threshold 70",
       "acceptance_prose": "Coverage reporting generates lcov output for Rust workspace. Cargo.toml has llvm-cov configuration. CI includes coverage reporting with >= 70% threshold.",
       "manual": false,
-      "tags": ["coverage", "quality-gate", "cargo-llvm-cov"],
+      "tags": [
+        "coverage",
+        "quality-gate",
+        "cargo-llvm-cov"
+      ],
       "estimated_hours": 3
     },
     {
@@ -103,15 +137,22 @@
       "title": "Implement test impact analysis (affected tests only)",
       "section": "Priority 3 - Automation",
       "priority": 60,
-      "deps": ["TH-001", "TH-002"],
-      "scope": [
-        "scripts/tf-test-harness/scripts/select-tests.py",
-        "scripts/tf-test-harness/lib/impact.sh"
+      "deps": [
+        "TH-001",
+        "TH-002"
       ],
-      "accept": "python3 scripts/tf-test-harness/scripts/select-tests.py --base origin/main --list | head -20; bash scripts/tf-test-harness/test-harness.sh --affected --dry-run",
+      "scope": [
+        "tf-test-harness/scripts/select-tests.py",
+        "tf-test-harness/lib/impact.sh"
+      ],
+      "accept": "python3 tf-test-harness/scripts/select-tests.py --base origin/main --list | head -20; bash tf-test-harness/test-harness.sh --affected --dry-run",
       "acceptance_prose": "select-tests.py identifies tests affected by file changes. --affected flag in test-harness.sh only runs affected tests. Dry run shows correct test selection without execution.",
       "manual": false,
-      "tags": ["test-impact", "affected-tests", "automation"],
+      "tags": [
+        "test-impact",
+        "affected-tests",
+        "automation"
+      ],
       "estimated_hours": 4
     },
     {
@@ -120,16 +161,23 @@
       "title": "Add mutation testing with cargo-mutants",
       "section": "Priority 3 - Automation",
       "priority": 70,
-      "deps": ["TH-001"],
-      "scope": [
-        "scripts/tf-test-harness/scripts/mutation-test.py",
-        "scripts/tf-test-harness/lib/mutation.sh",
-        "scripts/tf-test-harness/test-harness.sh"
+      "deps": [
+        "TH-001"
       ],
-      "accept": "cargo mutants run --package wo-common --threshold 80; bash scripts/tf-test-harness/test-harness.sh --category mut --dry-run",
+      "scope": [
+        "tf-test-harness/scripts/mutation-test.py",
+        "tf-test-harness/lib/mutation.sh",
+        "tf-test-harness/test-harness.sh"
+      ],
+      "accept": "cargo mutants run --package wo-common --threshold 80; bash tf-test-harness/test-harness.sh --category mut --dry-run",
       "acceptance_prose": "Mutation testing runs cargo-mutants on wo-common with >= 80% score. test-harness.sh includes mutation category. cargo-mutants is configured in Cargo.toml.",
       "manual": false,
-      "tags": ["mutation-testing", "cargo-mutants", "automation", "quality-gate"],
+      "tags": [
+        "mutation-testing",
+        "cargo-mutants",
+        "automation",
+        "quality-gate"
+      ],
       "estimated_hours": 5
     },
     {
@@ -138,16 +186,22 @@
       "title": "Add visual regression testing with pixelmatch",
       "section": "Priority 3 - Automation",
       "priority": 80,
-      "deps": ["TH-001"],
+      "deps": [
+        "TH-001"
+      ],
       "scope": [
-        "scripts/tf-test-harness/scripts/visual-regression.sh",
-        "scripts/tf-test-harness/lib/visual.sh",
+        "tf-test-harness/scripts/visual-regression.sh",
+        "tf-test-harness/lib/visual.sh",
         "tests/golden/images/"
       ],
-      "accept": "TF_UPDATE_GOLDEN=1 bash scripts/tf-test-harness/scripts/visual-regression.sh --sample; bash scripts/tf-test-harness/scripts/visual-regression.sh --threshold 0.99",
+      "accept": "TF_UPDATE_GOLDEN=1 bash tf-test-harness/scripts/visual-regression.sh --sample; bash tf-test-harness/scripts/visual-regression.sh --threshold 0.99",
       "acceptance_prose": "Visual regression captures screenshots and compares against baselines using pixelmatch. TF_UPDATE_GOLDEN=1 updates baselines. Threshold comparison works with 99% similarity. Goldens stored in tests/golden/images/.",
       "manual": false,
-      "tags": ["visual-regression", "pixelmatch", "automation"],
+      "tags": [
+        "visual-regression",
+        "pixelmatch",
+        "automation"
+      ],
       "estimated_hours": 4
     },
     {
@@ -156,16 +210,23 @@
       "title": "Build agent evaluation harness for AI-generated edits",
       "section": "Priority 4 - Visibility & Advanced",
       "priority": 90,
-      "deps": ["TH-001", "TH-007"],
-      "scope": [
-        "scripts/tf-test-harness/logic/agent-eval/",
-        "scripts/tf-test-harness/scripts/agent-eval.py",
-        "scripts/tf-test-harness/test-harness.sh"
+      "deps": [
+        "TH-001",
+        "TH-007"
       ],
-      "accept": "python3 scripts/tf-test-harness/scripts/agent-eval.py --validate; bash scripts/tf-test-harness/test-harness.sh --category agent --dry-run",
+      "scope": [
+        "tf-test-harness/logic/agent-eval/",
+        "tf-test-harness/scripts/agent-eval.py",
+        "tf-test-harness/test-harness.sh"
+      ],
+      "accept": "python3 tf-test-harness/scripts/agent-eval.py --validate; bash tf-test-harness/test-harness.sh --category agent --dry-run",
       "acceptance_prose": "Agent evaluation harness validates AI-generated document edits against integrity invariants. Property/fuzz/mutation suites applied to agent outputs. Mutation score for agent surface tracked. category 'agent' works in test-harness.sh.",
       "manual": false,
-      "tags": ["agent-evaluation", "ai-edits", "validation-harness"],
+      "tags": [
+        "agent-evaluation",
+        "ai-edits",
+        "validation-harness"
+      ],
       "estimated_hours": 6
     },
     {
@@ -174,17 +235,24 @@
       "title": "Add performance and load testing infrastructure",
       "section": "Priority 4 - Visibility & Advanced",
       "priority": 100,
-      "deps": ["TH-001"],
+      "deps": [
+        "TH-001"
+      ],
       "scope": [
-        "scripts/tf-test-harness/scripts/load-test.sh",
-        "scripts/tf-test-harness/scripts/stress-test.sh",
-        "scripts/tf-test-harness/lib/performance.sh",
+        "tf-test-harness/scripts/load-test.sh",
+        "tf-test-harness/scripts/stress-test.sh",
+        "tf-test-harness/lib/performance.sh",
         "Cargo.toml"
       ],
-      "accept": "bash scripts/tf-test-harness/scripts/load-test.sh --users 10 --duration 30; cargo bench -p wo-renderer 2>/dev/null || echo 'benchmarks configured'",
+      "accept": "bash tf-test-harness/scripts/load-test.sh --users 10 --duration 30; cargo bench -p wo-renderer 2>/dev/null || echo 'benchmarks configured'",
       "acceptance_prose": "Load testing uses k6 to simulate users. Stress testing validates system under heavy load. criterion.rs benchmarks configured in Cargo.toml. CI includes performance CI workflow.",
       "manual": false,
-      "tags": ["performance", "load-testing", "k6", "criterion"],
+      "tags": [
+        "performance",
+        "load-testing",
+        "k6",
+        "criterion"
+      ],
       "estimated_hours": 4
     },
     {
@@ -193,15 +261,24 @@
       "title": "Create comprehensive HTML and JSON test reports",
       "section": "Priority 5 - Visibility",
       "priority": 110,
-      "deps": ["TH-001", "TH-002", "TH-005"],
-      "scope": [
-        "scripts/tf-test-harness/scripts/report.py",
-        "scripts/tf-test-harness/lib/reporting.sh"
+      "deps": [
+        "TH-001",
+        "TH-002",
+        "TH-005"
       ],
-      "accept": "bash scripts/tf-test-harness/test-harness.sh --category rust --fast --report-html test-report.html; test -f test-report.html; bash scripts/tf-test-harness/test-harness.sh --category rust --fast --report-json results.json; test -f results.json",
+      "scope": [
+        "tf-test-harness/scripts/report.py",
+        "tf-test-harness/lib/reporting.sh"
+      ],
+      "accept": "bash tf-test-harness/test-harness.sh --category rust --fast --report-html test-report.html; test -f test-report.html; bash tf-test-harness/test-harness.sh --category rust --fast --report-json results.json; test -f results.json",
       "acceptance_prose": "HTML report is interactive with statistics, breakdowns, timeline, and failure details. JSON report is machine-readable with full task results. Markdown report works for PR comments.",
       "manual": false,
-      "tags": ["reporting", "html", "json", "visibility"],
+      "tags": [
+        "reporting",
+        "html",
+        "json",
+        "visibility"
+      ],
       "estimated_hours": 3
     },
     {
@@ -210,16 +287,24 @@
       "title": "Wire harness graph into test selection system",
       "section": "Priority 5 - Visibility",
       "priority": 120,
-      "deps": ["TH-003", "TH-006"],
-      "scope": [
-        "scripts/tf-test-harness/scripts/generate-tests.py",
-        "scripts/harness-graph/seed.py",
-        "scripts/tf-test-harness/lib/feature-mapping.sh"
+      "deps": [
+        "TH-003",
+        "TH-006"
       ],
-      "accept": "python3 scripts/tf-test-harness/scripts/generate-tests.py --from-harness-graph; bash scripts/tf-test-harness/test-harness.sh --feature F-001 --dry-run",
+      "scope": [
+        "tf-test-harness/scripts/generate-tests.py",
+        "harness-graph/seed.py",
+        "tf-test-harness/lib/feature-mapping.sh"
+      ],
+      "accept": "python3 tf-test-harness/scripts/generate-tests.py --from-harness-graph; bash tf-test-harness/test-harness.sh --feature F-001 --dry-run",
       "acceptance_prose": "Tasks include feature IDs from harness graph. --feature flag selects tests by harness graph feature. Feature coverage report generated from task results.",
       "manual": false,
-      "tags": ["harness-graph", "feature-mapping", "test-selection", "visibility"],
+      "tags": [
+        "harness-graph",
+        "feature-mapping",
+        "test-selection",
+        "visibility"
+      ],
       "estimated_hours": 4
     },
     {
@@ -228,17 +313,26 @@
       "title": "Create unified CI/CD pipeline with all quality gates",
       "section": "Priority 1 - Foundational",
       "priority": 25,
-      "deps": ["TH-003", "TH-005", "TH-004"],
+      "deps": [
+        "TH-003",
+        "TH-005",
+        "TH-004"
+      ],
       "scope": [
         ".forgejo/workflows/test.yml",
         ".forgejo/workflows/test-harness.yml",
-        "scripts/tf-test-harness/",
+        "tf-test-harness/",
         "scripts/ci/"
       ],
       "accept": "grep -q 'harness-graph' .forgejo/workflows/test.yml && grep -q 'coverage' .forgejo/workflows/test.yml && grep -q 'parallel' .forgejo/workflows/test.yml",
       "acceptance_prose": "CI workflow includes: harness graph check, test parallelization, coverage reporting, and test-harness integration. All gates must pass for PR merge.",
       "manual": false,
-      "tags": ["ci-cd", "quality-gates", "pipeline", "foundational"],
+      "tags": [
+        "ci-cd",
+        "quality-gates",
+        "pipeline",
+        "foundational"
+      ],
       "estimated_hours": 3
     },
     {
@@ -247,22 +341,29 @@
       "title": "Document complete test harness architecture and usage",
       "section": "Priority 1 - Foundational",
       "priority": 15,
-      "deps": ["TH-001", "TH-002"],
+      "deps": [
+        "TH-001",
+        "TH-002"
+      ],
       "scope": [
-        "scripts/tf-test-harness/README.md",
-        "scripts/tf-test-harness/docs/",
+        "tf-test-harness/README.md",
+        "tf-test-harness/docs/",
         "CONTRIBUTING.md"
       ],
-      "accept": "test -f scripts/tf-test-harness/README.md && grep -q 'Quick Start' scripts/tf-test-harness/README.md && grep -q 'Architecture' scripts/tf-test-harness/README.md",
+      "accept": "test -f tf-test-harness/README.md && grep -q 'Quick Start' tf-test-harness/README.md && grep -q 'Architecture' tf-test-harness/README.md",
       "acceptance_prose": "README.md includes: architecture overview, quick start, task categories, test selection options, CI integration, troubleshooting. CONTRIBUTING.md references test harness usage.",
       "manual": false,
-      "tags": ["documentation", "readme", "contributing"],
+      "tags": [
+        "documentation",
+        "readme",
+        "contributing"
+      ],
       "estimated_hours": 2
     }
   ],
   "quality_gates": {
     "harness_graph": {
-      "check_command": "python3 scripts/harness-graph/seed.py --check",
+      "check_command": "python3 harness-graph/seed.py --check",
       "description": "Verify harness graph is up to date"
     },
     "coverage": {

@@ -10,13 +10,7 @@ thiserror = { workspace = true }
 wo-common = { path = "../wo-common" }
 wo-ooxml = { path = "../wo-ooxml" }
 wo-renderer = { path = "../wo-renderer" }
-wo-conformance = { path = "../wo-conformance" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 pdf-writer = { workspace = true }
 zip = { workspace = true }
-
-
-[[bin]]
-name = "wo-render-ir"
-path = "src/bin/render_ir.rs"

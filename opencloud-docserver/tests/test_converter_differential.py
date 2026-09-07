@@ -44,10 +44,27 @@ pytestmark = [
     pytest.mark.skipif(SOFFICE is None, reason="LibreOffice (soffice) not installed"),
 ]
 
-CORPUS_DIR = (
-    Path(__file__).resolve().parents[2]
-    / "core/crates/wo-conformance/corpus/cases"
-)
+def _find_corpus_dir() -> Path | None:
+    """Locate the wo-conformance corpus; caller skips when None.
+
+    Order: WO_CONFORMANCE_CORPUS env -> sibling wo-test-harness checkout ->
+    legacy in-repo path.
+    """
+    env = os.environ.get("WO_CONFORMANCE_CORPUS")
+    if env and Path(env).is_dir():
+        return Path(env)
+    here = Path(__file__).resolve()
+    candidates = [
+        here.parents[2] / "wo-test-harness" / "conformance" / "corpus" / "cases",
+        here.parents[2] / "core" / "crates" / "wo-conformance" / "corpus" / "cases",
+    ]
+    for c in candidates:
+        if c.is_dir():
+            return c
+    return None
+
+
+CORPUS_DIR = _find_corpus_dir()
 # Subset of the wo-conformance corpus that converts reliably under headless
 # LibreOffice here; covers plain, bold, bold-italic, heading, mixed-fonts,
 # single word. (Table cases are excluded — see module docstring.)
@@ -139,6 +156,8 @@ def _lo_convert(files: list[Path], prof: Path, outdir: Path, env: dict,
 # ---------------------------------------------------------------------------
 
 def test_docx_reader_text_agrees_with_libreoffice_on_corpus(lo_shared):
+    if CORPUS_DIR is None:
+        pytest.skip("wo-conformance corpus not checked out")
     td, env = lo_shared
     prof = td / "prof"
     files: list[Path] = []

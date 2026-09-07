@@ -118,7 +118,7 @@ files exist (LO can exit 0 without producing output).
 ## Relation to the wo-conformance borrow
 
 - The earlier borrow (`tests/test_conformance_corpus.py`, 30 cases) feeds the
-  converter the real `.docx` files from `core/crates/wo-conformance/corpus/cases/`
+  converter the real `.docx` files from `conformance/corpus/cases/` (wo-test-harness repo)
   — genuine documents, but they only cover basic formatting (fonts, spacing,
   tables, page breaks) and predate the bookmarks/comments/tracked-changes/
   cross-reference work.

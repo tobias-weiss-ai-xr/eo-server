@@ -7,7 +7,7 @@
 | **CRDT / TextCRDT** | Conflict-free Replicated Data Type; here a sequence CRDT for plain text with `(site, seq)` Lamport-clock identity and a `ROOT` anchor. |
 | **Hub (`CollabHub`)** | In-process collaboration engine: per-doc CRDT state, op log, presence, SSE fan-out. The only write path. |
 | **Op** | One mutation record `{"t": "insert"|"delete", "s": site, "b": seq, …}` — the audit trail. |
-| **Register / F-id** | The feature register `scripts/harness-graph/features.yaml` (82 stable F-### ids); coverage claims require tagged tests or a divergence note. |
+| **Register / F-id** | The feature register `harness-graph/features.yaml` (wo-test-harness repo) (82 stable F-### ids); coverage claims require tagged tests or a divergence note. |
 | **Divergence** | A documented, honest gap (e.g., "hyphenation absent after 4-step audit") recorded in the register instead of a false claim. |
 | **Drift gate** | `seed.py --check`: repo files are truth; the committed `graph.json` projection must match exactly. |
 | **check-register.py** | CI gate: every listed F-id must be test-covered or divergence-documented. |

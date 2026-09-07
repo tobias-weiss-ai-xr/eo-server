@@ -49,8 +49,8 @@ impl DocxRenderPipeline {
 
     /// Parse and lay out a DOCX into pages, without rasterizing.
     ///
-    /// This structured intermediate is what the conformance harness projects
-    /// into its normalized IR (see [`crate::conformance::DocxConformanceAdapter`]).
+    /// This structured intermediate is what the wo-test-harness
+    /// conformance-docx crate projects into its normalized IR.
     pub fn layout_pages(&self, docx_data: &[u8]) -> Result<Vec<LayoutPage>> {
         let body = self.parse_body(docx_data)?;
         let layout_engine = LayoutEngine::new(&self.config);

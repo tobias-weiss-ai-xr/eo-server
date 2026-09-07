@@ -85,7 +85,7 @@ SCOPES: dict[str, dict] = {
                        "core/crates/wo-docx-renderer/src/layout.rs",
                        "core/crates/wo-renderer-wasm/src/lib.rs"],
              "section": "§3.4", "engine": "DM",
-             "accept": "cargo test --workspace --lib && cargo run -p wo-conformance -- 06-font-times"},
+             "accept": "cargo test --workspace --lib && cd ../wo-test-harness && cargo run -p wo-conformance -- 06-font-times"},
     "DM-2": {"scope": ["core/crates/wo-ooxml-ops/"], "section": "§3.1", "engine": "DM",
              "accept": "cargo build -p wo-ooxml-ops"},
     "DM-3": {"scope": ["core/crates/wo-ooxml-ops/src/text.rs",

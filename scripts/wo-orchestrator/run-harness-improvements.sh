@@ -37,7 +37,17 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORCHESTRATOR_DIR="$SCRIPT_DIR"
-REPO_DIR="$(cd "$ORCHESTRATOR_DIR/../.." && pwd)"
+
+# The harness moved out of the server repo into wo-test-harness (Q2 2026).
+# Harness-improvement tasks (TH-*) act on the harness repo; resolve it via
+# WO_TEST_HARNESS env or a sibling `wo-test-harness` checkout.
+if [[ -n "${WO_TEST_HARNESS:-}" ]]; then
+  REPO_DIR="$WO_TEST_HARNESS"
+elif [[ -d "$SCRIPT_DIR/../../wo-test-harness/.git" ]]; then
+  REPO_DIR="$(cd "$SCRIPT_DIR/../../wo-test-harness" && pwd)"
+else
+  REPO_DIR="$(cd "$ORCHESTRATOR_DIR/../.." && pwd)"  # legacy: embedded repo
+fi
 
 # Harness improvement tasks configuration
 HARNESS_TASKS_DIR="$SCRIPT_DIR/config"

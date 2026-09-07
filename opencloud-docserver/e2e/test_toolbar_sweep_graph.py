@@ -1,7 +1,9 @@
 """Graph-driven toolbar sweep (button sweep 2.0).
 
-Walks the toolbar surfaces from scripts/harness-graph/graph.json (the
-projection of features.yaml + the editor sources) and asserts — against the
+Walks the toolbar surfaces from the wo-test-harness repo's
+harness-graph/graph.json (the projection of features.yaml + the editor
+sources, resolved via WO_HARNESS_GRAPH or a sibling checkout) and asserts —
+against the
 LIVE editor — that:
 
 1. every registered ``toolbar:{cmd}`` surface exists in the editor iframe,
@@ -33,9 +35,29 @@ from conftest import (
     open_file_by_name,
 )
 
-GRAPH = (
-    Path(__file__).resolve().parents[2] / "scripts" / "harness-graph" / "graph.json"
-)
+def _find_graph() -> Path:
+    """Locate harness-graph graph.json (register moved to wo-test-harness)."""
+    env = os.environ.get("WO_HARNESS_GRAPH")
+    if env:
+        p = Path(env)
+        if p.is_file():
+            return p
+        raise SystemExit(f"WO_HARNESS_GRAPH={env} is not a file")
+    here = Path(__file__).resolve()
+    candidates = [
+        here.parents[3].parent / "wo-test-harness" / "harness-graph" / "graph.json",
+        here.parents[2] / "scripts" / "harness-graph" / "graph.json",  # legacy
+    ]
+    for c in candidates:
+        if c.is_file():
+            return c
+    raise SystemExit(
+        "harness graph not found: set WO_HARNESS_GRAPH to the wo-test-harness "
+        "harness-graph/graph.json path"
+    )
+
+
+GRAPH = _find_graph()
 
 
 def _graph_toolbar_commands() -> set[str]:

@@ -28,7 +28,7 @@ healthcheck changes) land here first. Its `/etc/opencloud` volume now mirrors th
 
 | Workflow | Trigger | Gates |
 |----------|---------|-------|
-| `docserver.yml` | PR/push touching `opencloud-docserver/**` or `scripts/harness-graph/**` | `uv sync --frozen`, full pytest suite (incl. browser e2e, chromium), graph drift gate, register all-82 |
+| `docserver.yml` | PR/push touching `opencloud-docserver/**` (register/harness gates run from wo-test-harness) | `uv sync --frozen`, full pytest suite (incl. browser e2e, chromium), graph drift gate, register all-82 |
 | `conformance.yml` | PR paths + weekly schedule | Rust unit tests, drift gate, cross-engine fidelity vs LibreOffice, OnlyOffice oracle report |
 | `docker.yml` | push main | container build |
 
