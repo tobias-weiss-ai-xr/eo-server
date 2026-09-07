@@ -41,8 +41,17 @@ def _find_corpus() -> str | None:
     if env and os.path.isdir(env):
         return env
     here = os.path.dirname(__file__)
+    # CI (docserver.yml register job) checks wo-test-harness out INSIDE the
+    # server workspace ($GITHUB_WORKSPACE/wo-test-harness); locally it is a
+    # sibling of the checkout parent. Accept both, then the legacy in-repo path.
     candidates = [
-        os.path.join(here, "..", "..", "..", "wo-test-harness", "conformance", "corpus", "cases"),
+        # CI (docserver.yml) checks wo-test-harness out INSIDE the server
+        # workspace: $GITHUB_WORKSPACE/wo-test-harness == here/../.. .
+        os.path.join(here, "..", "..", "wo-test-harness", "conformance", "corpus", "cases"),
+        # Local dev checkout: harness is a sibling of the server checkout's
+        # grandparent (~/git/wo-test-harness next to ~/git/World-Office/...).
+        os.path.join(here, "..", "..", "..", "..", "wo-test-harness", "conformance", "corpus", "cases"),
+        # Legacy in-repo path (pre-move).
         os.path.join(here, "..", "..", "core", "crates", "wo-conformance", "corpus", "cases"),
     ]
     for c in candidates:
@@ -55,7 +64,7 @@ _CORPUS = _find_corpus()
 
 
 def _docx_files() -> list[str]:
-    if not os.path.isdir(_CORPUS):
+    if not _CORPUS or not os.path.isdir(_CORPUS):
         return []
     return sorted(glob.glob(os.path.join(_CORPUS, "*.docx")))
 

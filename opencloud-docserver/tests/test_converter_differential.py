@@ -54,8 +54,16 @@ def _find_corpus_dir() -> Path | None:
     if env and Path(env).is_dir():
         return Path(env)
     here = Path(__file__).resolve()
+    # CI checks wo-test-harness out inside the server workspace; locally it is
+    # a sibling of the checkout parent. Accept both, then legacy in-repo.
     candidates = [
+        # CI (docserver.yml) checks wo-test-harness out INSIDE the server
+        # workspace: $GITHUB_WORKSPACE/wo-test-harness == parents[2]/wo-test-harness.
         here.parents[2] / "wo-test-harness" / "conformance" / "corpus" / "cases",
+        # Local dev checkout: harness is a sibling of the server checkout's
+        # grandparent (~/git/wo-test-harness next to ~/git/World-Office/...).
+        here.parents[2].parent.parent / "wo-test-harness" / "conformance" / "corpus" / "cases",
+        # Legacy in-repo path (pre-move).
         here.parents[2] / "core" / "crates" / "wo-conformance" / "corpus" / "cases",
     ]
     for c in candidates:

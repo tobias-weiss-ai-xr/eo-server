@@ -19,6 +19,7 @@ feature register: F-010 F-011 F-012 F-013 F-014 F-015 F-016 F-017 F-018 F-030 F-
 from __future__ import annotations
 
 import json
+import os
 import random
 import time
 from pathlib import Path
@@ -44,9 +45,17 @@ def _find_graph() -> Path:
             return p
         raise SystemExit(f"WO_HARNESS_GRAPH={env} is not a file")
     here = Path(__file__).resolve()
+    # CI checks wo-test-harness out inside the server workspace; locally it is
+    # a sibling of the checkout parent. Accept both, then legacy in-repo.
     candidates = [
+        # CI (docserver.yml) checks wo-test-harness out INSIDE the server
+        # workspace: $GITHUB_WORKSPACE/wo-test-harness == parents[2]/wo-test-harness.
+        here.parents[2] / "wo-test-harness" / "harness-graph" / "graph.json",
+        # Local dev checkout: harness is a sibling of the server checkout's
+        # grandparent (~/git/wo-test-harness next to ~/git/World-Office/...).
         here.parents[3].parent / "wo-test-harness" / "harness-graph" / "graph.json",
-        here.parents[2] / "scripts" / "harness-graph" / "graph.json",  # legacy
+        # Legacy in-repo path (pre-move).
+        here.parents[2] / "scripts" / "harness-graph" / "graph.json",
     ]
     for c in candidates:
         if c.is_file():
