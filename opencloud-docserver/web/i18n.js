@@ -91,6 +91,10 @@
    * this catalog has no entry (fail-safe, never a throw).
    */
   const DEFAULT_TRANSLATIONS = {
+    "Tab.Home": "Home",
+    "Tab.Insert": "Insert",
+    "Tab.Layout": "Layout",
+    "Tab.Review": "Review",
     "Toolbar.Bold": "Bold",
     "Toolbar.Italic": "Italic",
     "Toolbar.Underline": "Underline",

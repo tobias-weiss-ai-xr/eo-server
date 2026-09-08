@@ -82,6 +82,19 @@
        format button. The export submenu exposes per-format items that the
        editor converts server-side (see editor.js doExport + router.py).
        aria-haspopup / aria-expanded drive the dropdown disclosure state. -->
+  <!-- Title bar (OO-golden band y0–28): brand + document name left, view
+       toggles right. Zoom lives in the status bar. -->
+  <div class="titlebar">
+    <span class="brand" aria-hidden="true">W</span>
+    <span class="doc-name">WorldOffice</span>
+    <button type="button" class="ribbon-tab active" data-tab="home" role="tab" aria-selected="true" data-i18n="Tab.Home">Home</button>
+    <button type="button" class="ribbon-tab" data-tab="insert" role="tab" aria-selected="false" data-i18n="Tab.Insert">Insert</button>
+    <button type="button" class="ribbon-tab" data-tab="layout" role="tab" aria-selected="false" data-i18n="Tab.Layout">Layout</button>
+    <button type="button" class="ribbon-tab" data-tab="review" role="tab" aria-selected="false" data-i18n="Tab.Review">Review</button>
+    <span class="spacer"></span>
+    <button id="btn-theme" title="Toggle dark/light theme" aria-label="Toggle theme" aria-pressed="false">☾</button>
+    <button id="btn-fullscreen" title="Toggle fullscreen" aria-label="Toggle fullscreen">⛶</button>
+  </div>
   <nav id="menu-bar" class="menu-bar" aria-label="Application menu" data-i18n-aria-label="MenuBar.Region">
     <div class="menu">
       <button type="button" id="btn-file" class="menu-trigger" aria-haspopup="true" aria-expanded="false" data-i18n="Menu.File">File</button>
@@ -103,11 +116,17 @@
         <li role="none"><button type="button" id="btn-ai-review" role="menuitem">AI changes…</button></li>
       </ul>
     </div>
+    <span class="sep"></span>
+    <button id="btn-undo" data-cmd="undo" title="Undo (Ctrl+Z)" data-i18n-title="Toolbar.UndoTitle" aria-label="Undo" data-i18n-aria-label="Toolbar.Undo" aria-keyshortcuts="Control+Z">↶</button>
+    <button id="btn-redo" data-cmd="redo" title="Redo (Ctrl+Y)" data-i18n-title="Toolbar.RedoTitle" aria-label="Redo" data-i18n-aria-label="Toolbar.Redo" aria-keyshortcuts="Control+Y Control+Shift+Z">↷</button>
+    <span class="spacer"></span>
+    <button id="btn-save" class="primary" title="Save (Ctrl+S)" data-i18n="Toolbar.Save" data-i18n-title="Toolbar.SaveTitle" aria-label="Save" data-i18n-aria-label="Toolbar.Save" aria-keyshortcuts="Control+S">Save</button>
   </nav>
   <header id="toolbar" class="toolbar" role="toolbar" aria-label="Formatting toolbar" data-i18n-aria-label="Toolbar.Region">
     <!-- Format group: character styles, font size/family, text color, highlight -->
     <!-- aria-pressed reflects the live on/off state (JS updateActiveStates);
          aria-keyshortcuts mirrors the keyboard shortcuts handled in editor.js. -->
+    <div class="ribbon-page active" data-tab="home" role="group" aria-label="Home ribbon" data-i18n-aria-label="Toolbar.Region">
     <button data-cmd="bold" title="Bold (Ctrl+B)" data-i18n-title="Toolbar.BoldTitle" aria-label="Bold" data-i18n-aria-label="Toolbar.Bold" aria-pressed="false" aria-keyshortcuts="Control+B">B</button>
     <button data-cmd="italic" title="Italic (Ctrl+I)" data-i18n-title="Toolbar.ItalicTitle" aria-label="Italic" data-i18n-aria-label="Toolbar.Italic" aria-pressed="false" aria-keyshortcuts="Control+I"><i>I</i></button>
     <button data-cmd="underline" title="Underline (Ctrl+U)" data-i18n-title="Toolbar.UnderlineTitle" aria-label="Underline" data-i18n-aria-label="Toolbar.Underline" aria-pressed="false" aria-keyshortcuts="Control+U"><u>U</u></button>
@@ -172,36 +191,43 @@
       <option value="3">3.0</option>
     </select>
     <span class="sep"></span>
+    </div>
+    <div class="ribbon-page" data-tab="insert" role="group" aria-label="Insert ribbon">
     <button id="btn-table" title="Insert table" data-i18n-title="Toolbar.InsertTableTitle" aria-label="Insert table" data-i18n-aria-label="Toolbar.InsertTable">▦</button>
     <button id="btn-table-ops" title="Table actions (rows, columns, merge)" aria-label="Table actions">▦✎</button>
     <button id="btn-image" title="Insert image" data-i18n-title="Toolbar.InsertImageTitle" aria-label="Insert image" data-i18n-aria-label="Toolbar.InsertImageTitle">🖼</button>
     <button id="btn-link" title="Insert link" aria-label="Insert link">🔗</button>
     <button id="btn-hr" title="Insert horizontal rule" aria-label="Insert horizontal rule">─</button>
+    </div>
+    <div class="ribbon-page" data-tab="layout" role="group" aria-label="Layout ribbon">
     <button id="btn-page-break" title="Insert page break" aria-label="Insert page break">⏎</button>
     <button id="btn-section-break" title="Insert section break" aria-label="Insert section break">⇘</button>
     <button id="btn-columns" title="Insert columns" aria-label="Insert columns">▥</button>
+    </div>
+    <div class="ribbon-page" data-tab="insert" role="group" aria-label="Insert ribbon (continued)">
     <button id="btn-toc" title="Insert table of contents" aria-label="Insert table of contents">☰</button>
     <button id="btn-object" title="Insert object" aria-label="Insert object">▢</button>
     <button id="btn-bookmark" title="Insert bookmark" aria-label="Insert bookmark">📑</button>
     <button id="btn-crossref" title="Insert cross-reference" aria-label="Insert cross-reference">🔗</button>
-    <button id="btn-track-changes" title="Track changes" aria-label="Track changes" aria-pressed="false">🛠</button>
+    </div>
+    <div class="ribbon-page" data-tab="review" role="group" aria-label="Review ribbon">
+    <button id="btn-track-changes" title="Track changes" aria-label="Track changes" aria-pressed="false">✎</button>
     <button id="btn-review-changes" title="Review changes" aria-label="Review changes">✓</button>
     <button id="btn-comment" title="Add comment" aria-label="Add comment">💬</button>
-    <button id="btn-comments" title="Show comments" aria-label="Show comments">🗒</button>
+    <button id="btn-comments" title="Show comments" aria-label="Show comments">◫</button>
+    </div>
+    <div class="ribbon-page" data-tab="insert" role="group" aria-label="Insert ribbon (continued)">
     <button id="btn-symbol" title="Insert symbol" aria-label="Insert symbol">Ω</button>
     <button id="btn-datetime" title="Insert date" aria-label="Insert date">📅</button>
-    <button id="btn-find" title="Find and replace (Ctrl+F)" data-i18n-title="Toolbar.FindTitle" aria-label="Find and replace" data-i18n-aria-label="Toolbar.Find" aria-keyshortcuts="Control+F">🔍</button>
-    <span class="sep"></span>
-    <button id="btn-undo" data-cmd="undo" title="Undo (Ctrl+Z)" data-i18n-title="Toolbar.UndoTitle" aria-label="Undo" data-i18n-aria-label="Toolbar.Undo" aria-keyshortcuts="Control+Z">↶</button>
-    <button id="btn-redo" data-cmd="redo" title="Redo (Ctrl+Y)" data-i18n-title="Toolbar.RedoTitle" aria-label="Redo" data-i18n-aria-label="Toolbar.Redo" aria-keyshortcuts="Control+Y Control+Shift+Z">↷</button>
-    <span class="sep"></span>
-    <!-- View controls: dark/light theme, fullscreen. Zoom lives in the
-         status bar (matches the OO golden layout). -->
-    <button id="btn-theme" title="Toggle dark/light theme" aria-label="Toggle theme" aria-pressed="false">🌙</button>
-    <button id="btn-fullscreen" title="Toggle fullscreen" aria-label="Toggle fullscreen">⛶</button>
-    <span class="spacer"></span>
-    <button id="btn-save" class="primary" title="Save (Ctrl+S)" data-i18n="Toolbar.Save" data-i18n-title="Toolbar.SaveTitle" aria-label="Save" data-i18n-aria-label="Toolbar.Save" aria-keyshortcuts="Control+S">Save</button>
+    </div>
+    <div class="ribbon-page active" data-tab="home" role="group" aria-label="Home ribbon (continued)">
+    <button id="btn-find" title="Find and replace (Ctrl+F)" data-i18n-title="Toolbar.FindTitle" aria-label="Find and replace" data-i18n-aria-label="Toolbar.Find" aria-keyshortcuts="Control+F">⌕</button>
+    </div>
   </header>
+
+  <!-- Ruler (OO-golden band: ticks over the page width, backdrop elsewhere).
+       Decorative visual-parity element; aria-hidden. -->
+  <div class="ruler" aria-hidden="true"><div class="ruler-track"></div></div>
 
   <main>
     <!-- Rich-text editing surface: explicit textbox role + accessible name

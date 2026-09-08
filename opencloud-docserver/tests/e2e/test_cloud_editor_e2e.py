@@ -188,6 +188,11 @@ def _frame_text(frame) -> str:
     return frame.locator("#editor").inner_text()
 
 
+def _open_ribbon_tab(frame, tab: str) -> None:
+    """Bring a ribbon tab's controls on-screen (idempotent)."""
+    frame.locator(f".ribbon-tab[data-tab='{tab}']").click()
+
+
 def _post_sync(servers: dict, seed: dict, text: str) -> None:
     urllib.request.urlopen(
         urllib.request.Request(
@@ -395,6 +400,7 @@ def test_insert_link_roundtrip(servers):
             frame.locator("#editor").press("End")
             frame.locator("#editor").press_sequentially("Visit our site")
             frame.locator("#editor").select_text()  # select all document text
+            _open_ribbon_tab(frame, "insert")
             frame.locator("#btn-link").click()
             frame.locator("#link-url").fill("https://example.com")
             frame.locator("#btn-link-ok").click()
@@ -402,6 +408,7 @@ def test_insert_link_roundtrip(servers):
             assert frame.locator("#editor a").first.get_attribute("href") == "https://example.com"
 
             # Save -> the link survives the round-trip back to the host.
+            _open_ribbon_tab(frame, "home")
             frame.locator("#btn-save").click()
             _wait(lambda: "example.com" in _host_text(servers, seed))
         finally:
@@ -463,6 +470,7 @@ def test_table_merge_and_column_ops(servers):
 
             frame.locator("#editor").click()
             frame.locator("#editor").press("End")
+            _open_ribbon_tab(frame, "insert")
             frame.locator("#btn-table").click()
             frame.locator("#table-rows").fill("2")
             frame.locator("#table-cols").fill("2")
@@ -498,6 +506,7 @@ def test_table_merge_and_column_ops(servers):
             assert frame.locator("#editor tr").nth(1).locator("td").count() == 1
 
             # Save -> the merged colspan survives round-trip to the host.
+            _open_ribbon_tab(frame, "home")
             frame.locator("#btn-save").click()
             _wait(lambda: "colspan" in _host_html(servers, seed).lower())
         finally:
@@ -523,16 +532,19 @@ def test_insert_hr_pagebreak_symbol(servers):
             frame.locator("#editor").press("End")
 
             # Horizontal rule.
+            _open_ribbon_tab(frame, "insert")
             frame.locator("#btn-hr").click()
             frame.locator("#editor hr").wait_for(state="attached", timeout=5000)
             assert frame.locator("#editor hr").count() == 1
 
             # Page break marker.
+            _open_ribbon_tab(frame, "layout")
             frame.locator("#btn-page-break").click()
             frame.locator("#editor div.page-break").wait_for(state="attached", timeout=5000)
             assert frame.locator("#editor div.page-break").count() == 1
 
             # Symbol picker -> first symbol (§) inserted as text.
+            _open_ribbon_tab(frame, "insert")
             frame.locator("#btn-symbol").click()
             frame.locator("#symbol-dialog .symbol-btn").first.click()
             _wait(lambda: "§" in _frame_text(frame))
@@ -542,6 +554,7 @@ def test_insert_hr_pagebreak_symbol(servers):
             _wait(lambda: "2026-" in _frame_text(frame))
 
             # Save -> markers + symbol + date reach the host DOCX.
+            _open_ribbon_tab(frame, "home")
             frame.locator("#btn-save").click()
             _wait(lambda: (
                 "<hr" in _host_html(servers, seed)

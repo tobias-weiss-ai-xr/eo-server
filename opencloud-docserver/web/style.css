@@ -12,6 +12,8 @@
   --paper: #ffffff;
   --ink: #1a1a1a;
   --hover: rgba(255, 255, 255, 0.08);
+  --ribbon: #2a2a3a;
+  --ruler-tick: #4a4a5e;
 }
 
 /* Light theme: toggled from the toolbar; keeps the same variable names so the
@@ -29,6 +31,8 @@ html.light {
   --paper: #ffffff;
   --ink: #1a1a1a;
   --hover: rgba(0, 0, 0, 0.06);
+  --ribbon: #fefefe;   /* OO golden ribbon band on white */
+  --ruler-tick: #b9b9b9;
 }
 
 * { box-sizing: border-box; }
@@ -116,18 +120,86 @@ body {
 /* ---- toolbar ---- */
 .toolbar {
   display: flex;
-  flex-wrap: wrap;            /* never clip controls: the ribbon wraps to
-                                 additional rows instead of overflowing the
-                                 viewport (observed: 20/59 controls cut off on
-                                 a 1440px window — page break … Save unreachable) */
+  flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
-  row-gap: 6px;
-  padding: 8px 12px;
-  background: var(--surface);
+  padding: 0 12px;
+  min-height: 86px;          /* OO golden ribbon band y52–138 */
+  background: var(--ribbon);
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
   overflow: visible;
+}
+
+/* Ribbon pages: one visible control group per tab (default Home). */
+.ribbon-page { display: none; }
+.ribbon-page.active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  row-gap: 6px;
+  width: 100%;
+}
+
+/* Title bar (band y0–28): brand, document name, ribbon tabs, view toggles. */
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  flex: 0 0 auto;
+  padding: 0 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+.titlebar .brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 11px;
+}
+.titlebar .doc-name { font-weight: 600; color: var(--text); }
+.titlebar .spacer { flex: 1; }
+.titlebar button {
+  min-width: 24px;
+  height: 22px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.titlebar button:hover { background: var(--hover); color: var(--text); }
+
+/* Ruler (band y138–172): cm ticks over the page width, backdrop elsewhere.
+   Decorative visual-parity strip. */
+.ruler {
+  flex: 0 0 auto;
+  height: 32px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  position: relative;
+}
+.ruler-track {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: min(792px, 90%);
+  transform: translateX(-50%);
+  background:
+    repeating-linear-gradient(90deg, var(--ruler-tick) 0 1px, transparent 1px 48.6px) left bottom / 100% 12px no-repeat,
+    repeating-linear-gradient(90deg, var(--ruler-tick) 0 1px, transparent 1px 9.72px) left bottom / 100% 6px no-repeat;
 }
 
 .toolbar button {
@@ -145,13 +217,15 @@ body {
 .toolbar button:hover { background: var(--hover); }
 .toolbar button.active,
 .toolbar button[aria-pressed="true"] { background: var(--accent); color: #fff; }
-.toolbar button.primary {
+.toolbar button.primary,
+.menu-bar button.primary {
   background: var(--accent);
   color: #fff;
   padding: 0 16px;
   font-weight: 600;
 }
-.toolbar button.primary:hover { background: var(--accent-hover); }
+.toolbar button.primary:hover,
+.menu-bar button.primary:hover { background: var(--accent-hover); }
 
 .toolbar .sep {
   width: 1px;
@@ -231,22 +305,58 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 12px;
+  height: 24px;
+  padding: 0 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
 }
+.menu-bar .spacer { flex: 1; }
 
-.menu { position: relative; }
-
-.menu-trigger {
-  height: 28px;
-  padding: 0 10px;
+/* App row (band y28–52): File menu, undo/redo, save. */
+.menu-bar button:not(.menu-trigger):not(.ribbon-tab) {
+  height: 22px;
+  min-width: 26px;
+  padding: 0 6px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   color: var(--text);
   font-size: 14px;
+  cursor: pointer;
+}
+.menu-bar button:not(.menu-trigger):not(.ribbon-tab):hover {
+  background: var(--hover);
+}
+
+/* Ribbon tabs (title bar): label tabs, accent underline on the active one. */
+.ribbon-tab {
+  height: 24px;
+  padding: 0 8px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ribbon-tab:hover { color: var(--text); background: var(--hover); }
+.ribbon-tab[aria-selected="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.menu { position: relative; }
+
+.menu-trigger {
+  height: 22px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -323,7 +433,7 @@ body {
   align-items: center;
   gap: 10px;
   flex: 0 0 auto;
-  height: 30px;
+  height: 32px;
   padding: 0 12px;
   background: var(--surface);
   border-top: 1px solid var(--border);
@@ -439,14 +549,14 @@ main {
   position: relative;
   flex: 1;
   overflow: auto;
-  padding: 24px 16px;
+  padding: 24px 16px 0;   /* no bottom pad: paper runs into the statusbar */
   display: flex;
   justify-content: center;
 }
 
 #editor {
   width: min(900px, 100%);
-  min-height: 70vh;
+  min-height: calc(100vh - 228px); /* fills to the statusbar like the OO golden */
   background: var(--paper);
   color: var(--ink);
   border-radius: 8px;
@@ -671,7 +781,7 @@ main {
    paper surface fills the page with comfortable @page margins. */
 @media print {
   body { background: #fff !important; }
-  nav, header.toolbar, footer, .status, .dialog-overlay,
+  nav, header.toolbar, footer, .titlebar, .ruler, .status, .dialog-overlay,
   #collab-peers, #collab-overlay, #find-bar, .sync-pill {
     display: none !important;
   }

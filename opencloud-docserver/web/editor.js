@@ -943,7 +943,7 @@
   }
 
   function updateActiveStates() {
-    document.querySelectorAll(".toolbar button[data-cmd]").forEach((btn) => {
+    document.querySelectorAll("button[data-cmd]").forEach((btn) => {
       const cmd = btn.dataset.cmd;
       if (!cmd || cmd === "undo" || cmd === "redo") return;
       let active = false;
@@ -1055,24 +1055,33 @@
     }
     return null;
   }
-  // Trap Tab / Shift+Tab inside the open modal overlay.
+  // Trap Tab / Shift+Tab inside the open modal overlay. Fully manual:
+  // every Tab is intercepted and focus is moved within the dialog's own
+  // focusables (with wrap-around). A boundary-only trap still lets native
+  // tabbing skip dialog controls and escape the modal (observed in Chromium
+  // with the statusbar footer present), so focus is clamped here instead.
   document.addEventListener("keydown", (ev) => {
     if (ev.key !== "Tab") return;
     const dialog = getOpenDialog();
     if (!dialog) return;
-    const focusables = dialog.querySelectorAll(
-      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"]):not([disabled])'
-    );
+    const focusables = Array.from(
+      dialog.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"]):not([disabled])'
+      )
+    ).filter((el) => el.offsetParent !== null || el === document.activeElement);
     if (focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (ev.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
-      ev.preventDefault();
-      last.focus();
-    } else if (!ev.shiftKey && document.activeElement === last) {
-      ev.preventDefault();
-      first.focus();
+    ev.preventDefault(); // a dialog is open: Tab must never leave it
+    const idx = focusables.indexOf(document.activeElement);
+    if (idx === -1) {
+      // Focus escaped (or dialog just opened): clamp back inside.
+      focusables[0].focus();
+      return;
     }
+    const n = focusables.length;
+    const next = ev.shiftKey
+      ? focusables[(idx - 1 + n) % n]
+      : focusables[(idx + 1) % n];
+    next.focus();
   });
 
   // ------------------------------------------------------------------
@@ -2362,7 +2371,7 @@
     );
   }
 
-  document.querySelectorAll(".toolbar button[data-cmd]").forEach((btn) => {
+  document.querySelectorAll("button[data-cmd]").forEach((btn) => {
     btn.addEventListener("click", () => emitCommand(btn.dataset.cmd, btn.dataset.value));
   });
   document.getElementById("btn-table").addEventListener("click", insertTable);
@@ -2773,6 +2782,16 @@
     localStorage.setItem("wo-theme", isLight ? "dark" : "light");
     applyTheme();
   }
+  // --- ribbon tabs: switch the visible control group ----------------
+  document.querySelectorAll(".ribbon-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".ribbon-tab").forEach((t) =>
+        t.setAttribute("aria-selected", String(t === tab)));
+      document.querySelectorAll(".ribbon-page").forEach((p) =>
+        p.classList.toggle("active", p.dataset.tab === tab.dataset.tab));
+    });
+  });
+
   function toggleFullscreen() {
     document.body.classList.toggle("fullscreen");
     if (document.fullscreenElement) {
