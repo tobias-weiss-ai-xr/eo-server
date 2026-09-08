@@ -126,7 +126,8 @@
     <!-- Format group: character styles, font size/family, text color, highlight -->
     <!-- aria-pressed reflects the live on/off state (JS updateActiveStates);
          aria-keyshortcuts mirrors the keyboard shortcuts handled in editor.js. -->
-    <div class="ribbon-page active" data-tab="home" role="group" aria-label="Home ribbon" data-i18n-aria-label="Toolbar.Region">
+    <div class="ribbon-page two-row active" data-tab="home" role="group" aria-label="Home ribbon" data-i18n-aria-label="Toolbar.Region">
+    <div class="ribbon-row">
     <button data-cmd="bold" title="Bold (Ctrl+B)" data-i18n-title="Toolbar.BoldTitle" aria-label="Bold" data-i18n-aria-label="Toolbar.Bold" aria-pressed="false" aria-keyshortcuts="Control+B">B</button>
     <button data-cmd="italic" title="Italic (Ctrl+I)" data-i18n-title="Toolbar.ItalicTitle" aria-label="Italic" data-i18n-aria-label="Toolbar.Italic" aria-pressed="false" aria-keyshortcuts="Control+I"><i>I</i></button>
     <button data-cmd="underline" title="Underline (Ctrl+U)" data-i18n-title="Toolbar.UnderlineTitle" aria-label="Underline" data-i18n-aria-label="Toolbar.Underline" aria-pressed="false" aria-keyshortcuts="Control+U"><u>U</u></button>
@@ -161,6 +162,8 @@
       <span class="color-key key-highlight" aria-hidden="true">A</span>
       <input type="color" id="highlight-color" value="#ffe97a" aria-label="Highlight color">
     </label>
+    </div>
+    <div class="ribbon-row">
     <span class="sep"></span>
     <!-- Paragraph styles: headings + paragraph reset -->
     <button data-cmd="formatBlock" data-value="H1" title="Heading 1 (Ctrl+Alt+1)" data-i18n-title="Toolbar.Heading1Title" aria-label="Heading 1" data-i18n-aria-label="Toolbar.Heading1Title" aria-pressed="false" aria-keyshortcuts="Control+Alt+1">H1</button>
@@ -191,6 +194,7 @@
       <option value="3">3.0</option>
     </select>
     <span class="sep"></span>
+    </div>
     </div>
     <div class="ribbon-page" data-tab="insert" role="group" aria-label="Insert ribbon">
     <button id="btn-table" title="Insert table" data-i18n-title="Toolbar.InsertTableTitle" aria-label="Insert table" data-i18n-aria-label="Toolbar.InsertTable">▦</button>

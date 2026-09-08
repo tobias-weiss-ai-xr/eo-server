@@ -119,6 +119,11 @@ def _parse_launch(request: Request, form: dict | None):
     q = request.query_params
     token = (form or {}).get("access_token") or q.get("access_token")
     wopi_src = q.get("WOPISrc") or (form or {}).get("WOPISrc")
+    if wopi_src and "://" not in wopi_src:
+        # Tolerate scheme-less WOPISrc (dev launches, curl, rigs): urlparse
+        # would otherwise see no scheme/netloc and silently fall back to the
+        # configured wopi_host — CFI would hit the wrong host and 401.
+        wopi_src = f"http://{wopi_src}"
     doc_id = (form or {}).get("file_id")
     if wopi_src:
         parsed = urllib.parse.urlparse(wopi_src)

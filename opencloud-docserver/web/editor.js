@@ -38,6 +38,8 @@
 (function () {
   const DOC_ID = window.__DOC_ID__ || "unknown";
   const DOC_NAME = window.__DOC_NAME__ || "document.docx";
+  const docNameEl = document.querySelector(".doc-name");
+  if (docNameEl) docNameEl.textContent = DOC_NAME;
   // The server routes conversion by extension (see _document_format in
   // src/editor/router.py); ODT files round-trip through the odfpy converter.
   const DOC_FORMAT = /\.odt$/i.test(DOC_NAME) ? "odt" : "docx";

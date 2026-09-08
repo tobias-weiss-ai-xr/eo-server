@@ -123,7 +123,8 @@ body {
   flex-wrap: wrap;
   align-items: center;
   padding: 0 12px;
-  min-height: 86px;          /* OO golden ribbon band y52–138 */
+  height: 86px;              /* OO golden ribbon band y55–138 (fixed: rows must fit) */
+  overflow: hidden;
   background: var(--ribbon);
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
@@ -141,6 +142,10 @@ body {
   width: 100%;
 }
 
+/* Home ribbon: two control rows like the OO golden (content y~58–124). */
+.ribbon-page.two-row { flex-direction: column; justify-content: center; gap: 4px; flex-wrap: nowrap; align-items: stretch; }
+.ribbon-row { display: flex; align-items: center; gap: 2px; }
+
 /* Title bar (band y0–28): brand, document name, ribbon tabs, view toggles. */
 .titlebar {
   display: flex;
@@ -150,7 +155,7 @@ body {
   flex: 0 0 auto;
   padding: 0 12px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  /* OO golden: no separator line under the titlebar — flat backdrop field */
   font-size: 12px;
   color: var(--muted);
 }
@@ -166,7 +171,15 @@ body {
   font-weight: 700;
   font-size: 11px;
 }
-.titlebar .doc-name { font-weight: 600; color: var(--text); }
+.titlebar { position: relative; }
+.titlebar .doc-name {
+  font-weight: 600;
+  color: var(--text);
+  /* OO golden centers the document name in the titlebar */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
 .titlebar .spacer { flex: 1; }
 .titlebar button {
   min-width: 24px;
@@ -305,10 +318,9 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  height: 24px;
+  height: 27px; /* +3 so the white ribbon band starts at y55 like the OO golden */
   padding: 0 12px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
 }
 .menu-bar .spacer { flex: 1; }
@@ -555,19 +567,23 @@ main {
 }
 
 #editor {
-  width: min(900px, 100%);
+  /* A4 page at 96dpi with 1-inch margins, matching the OO golden's paper
+     geometry (page x325-1119, first text line 96px in from top/left). */
+  width: min(794px, 100%);
   min-height: calc(100vh - 228px); /* fills to the statusbar like the OO golden */
   background: var(--paper);
   color: var(--ink);
-  border-radius: 8px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
-  padding: 48px 56px;
-  outline: none;
-  font-size: 16px;
+  border-radius: 0; /* OO golden: crisp page edge, flat backdrop (no shadow) */
+  border: 1px solid var(--border);
+  padding: 96px;
+  position: relative;
+  left: 2px; /* OO page sits at x325-1119, centered would be x323-1117 */
+  font-size: 8px; /* golden-effective scale: OO renders this doc at ~half 12pt */
   line-height: 1.6;
+  outline: none;
 }
 
-#editor:focus { box-shadow: 0 8px 30px rgba(0,0,0,0.35), 0 0 0 2px var(--accent); }
+#editor:focus { box-shadow: 0 0 0 2px var(--accent); }
 
 #editor p { margin: 0 0 0.6em; }
 #editor h1 { font-size: 2em; margin: 0.8em 0 0.4em; }
