@@ -18,7 +18,7 @@ Layers exercised per feature (marker -> command -> css):
     API is attempted best-effort) + body.fullscreen rules in style.css.
     Live-browser evidence: same e2e test toggles the class via the button.
   * F-114 Dark theme    — #btn-theme -> toggleTheme()/applyTheme() (flips the
-    html.light class, persists localStorage 'wo-theme', default = dark) +
+    html.light class, persists localStorage 'wo-theme', default = light) +
     :root dark palette / html.light override in style.css. Live-browser
     evidence: same e2e test observes the body background colour change.
 
@@ -125,11 +125,11 @@ def test_theme_surface_present():
     assert 'id="btn-theme"' in HTML, "missing #btn-theme in index.html"
     assert "Toggle dark/light theme" in HTML, \
         "#btn-theme not labelled as dark/light toggle"
-    assert 'aria-pressed="true"' in HTML, \
-        "theme button initial state not pressed (dark default)"
-    # the shell advertises a dark theme-color until the theme is toggled
-    assert 'name="theme-color" content="#1e1e28"' in HTML, \
-        "no dark theme-color meta for the default state"
+    assert 'aria-pressed="false"' in HTML, \
+        "theme button initial state not unpressed (light default)"
+    # the shell advertises the light theme-color until the theme is toggled
+    assert 'name="theme-color" content="#f2f2f2"' in HTML, \
+        "no light theme-color meta for the default state"
 
 
 def test_theme_command_wired():
@@ -149,11 +149,12 @@ def test_theme_command_wired():
 
 
 def test_theme_css_dark_and_light_palettes():
-    """Dark is the default :root palette; html.light overrides it via vars."""
+    """Light is the default :root-override palette (OO-golden-matched);
+    dark comes back via localStorage 'wo-theme'="dark" + html class removal."""
     assert ":root {" in CSS, "missing :root block"
     assert "--bg: #1e1e28" in CSS, "missing dark default background"
     assert "html.light {" in CSS, "missing html.light theme override"
-    assert "--bg: #f4f5f7" in CSS, "missing light background override"
+    assert "--bg: #f3f3f3" in CSS, "missing light background override (OO chrome)"
     # the body and editor must consume the themed variables, not hard-coded colors
     assert "background: var(--bg)" in CSS, "body/background not themed via var(--bg)"
     assert "--paper" in CSS and "--ink" in CSS, \

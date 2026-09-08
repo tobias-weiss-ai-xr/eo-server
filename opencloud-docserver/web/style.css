@@ -11,20 +11,24 @@
   --accent-hover: #5b7bf9;
   --paper: #ffffff;
   --ink: #1a1a1a;
+  --hover: rgba(255, 255, 255, 0.08);
 }
 
 /* Light theme: toggled from the toolbar; keeps the same variable names so the
    whole UI re-skins without per-component overrides. */
+/* Light palette mirrors the OnlyOffice light golden (visual-rig B-layer):
+   chrome #f2f2f2, hairlines #e1e1e1, icons #383838, accent rgb(55,96,146). */
 html.light {
-  --bg: #f4f5f7;
-  --surface: #ffffff;
-  --border: #d8dae0;
-  --text: #1a1a1a;
-  --muted: #5a5f6b;
-  --accent: #3a5bd9;
-  --accent-hover: #2f4ac0;
+  --bg: #f3f3f3;
+  --surface: #f2f2f2;
+  --border: #e1e1e1;
+  --text: #383838;
+  --muted: #8a8a8a;
+  --accent: #37608f;
+  --accent-hover: #2f527b;
   --paper: #ffffff;
   --ink: #1a1a1a;
+  --hover: rgba(0, 0, 0, 0.06);
 }
 
 * { box-sizing: border-box; }
@@ -138,7 +142,7 @@ body {
   cursor: pointer;
 }
 
-.toolbar button:hover { background: rgba(255,255,255,0.08); }
+.toolbar button:hover { background: var(--hover); }
 .toolbar button.active,
 .toolbar button[aria-pressed="true"] { background: var(--accent); color: #fff; }
 .toolbar button.primary {
@@ -188,7 +192,7 @@ body {
   cursor: pointer;
 }
 
-.toolbar .color-btn:hover { background: rgba(255, 255, 255, 0.08); }
+.toolbar .color-btn:hover { background: var(--hover); }
 
 .toolbar .color-key {
   font-size: 13px;
@@ -248,7 +252,7 @@ body {
 
 .menu-trigger:hover,
 .menu-trigger:focus-visible,
-.menu-trigger[aria-expanded="true"] { background: rgba(255,255,255,0.08); }
+.menu-trigger[aria-expanded="true"] { background: var(--hover); }
 
 .menu-list,
 .menu-sublist {
@@ -312,7 +316,35 @@ body {
   margin-right: 10px;
   white-space: nowrap;
 }
-.toolbar .offline-indicator {
+
+/* ---- status bar (bottom strip: word count / save status / zoom) ---- */
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+html.light .statusbar { background: #fdfdfd; }  /* OO golden: near-white bar */
+.statusbar .spacer { flex: 1; }
+.statusbar button {
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.statusbar button:hover { background: var(--hover); color: var(--text); }
+.offline-indicator {
   font-size: 12px;
   font-weight: 600;
   color: #d97706;
@@ -562,7 +594,7 @@ main {
   cursor: pointer;
 }
 
-.dialog-actions button:hover { background: rgba(255, 255, 255, 0.08); }
+.dialog-actions button:hover { background: var(--hover); }
 
 .dialog-actions button.primary {
   background: var(--accent);
@@ -591,7 +623,8 @@ main {
   .toolbar { flex-wrap: wrap; gap: 4px; padding: 6px 8px; }
   .toolbar button { min-width: 36px; height: 36px; }
   .toolbar .sep { display: none; }
-  .toolbar .status { display: none; }
+  .toolbar .status, .statusbar .status, .statusbar .status-meta { display: none; }
+  .statusbar { height: 34px; }
   .toolbar .toolbar-select { height: 36px; }
   #font-family { width: 120px; max-width: 120px; }
   #line-spacing { width: 84px; max-width: 84px; }

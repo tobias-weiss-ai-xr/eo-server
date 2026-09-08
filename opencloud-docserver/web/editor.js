@@ -2759,10 +2759,14 @@
     localStorage.setItem("wo-zoom", String(zoomLevel));
   }
   function applyTheme() {
-    const dark = localStorage.getItem("wo-theme") !== "light";
+    // Light is the default (matches the OnlyOffice light golden); stored value
+    // only flips it when the user explicitly chose dark.
+    const dark = localStorage.getItem("wo-theme") === "dark";
     document.documentElement.classList.toggle("light", !dark);
     const themeBtn = document.getElementById("btn-theme");
     if (themeBtn) themeBtn.setAttribute("aria-pressed", String(dark));
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", dark ? "#1e1e28" : "#f2f2f2");
   }
   function toggleTheme() {
     const isLight = document.documentElement.classList.contains("light");
