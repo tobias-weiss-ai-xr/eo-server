@@ -112,12 +112,18 @@ body {
 /* ---- toolbar ---- */
 .toolbar {
   display: flex;
+  flex-wrap: wrap;            /* never clip controls: the ribbon wraps to
+                                 additional rows instead of overflowing the
+                                 viewport (observed: 20/59 controls cut off on
+                                 a 1440px window — page break … Save unreachable) */
   align-items: center;
   gap: 2px;
+  row-gap: 6px;
   padding: 8px 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
+  overflow: visible;
 }
 
 .toolbar button {
@@ -214,7 +220,7 @@ body {
 
 .toolbar button svg { display: block; margin: 0 auto; }
 
-.toolbar .spacer { flex: 1; }
+.toolbar .spacer { flex: 0 1 12px; }  /* in wrap mode a grow-1 spacer would open a full-width gap row */
 
 /* ---- menu bar (File menu: New / Open / Export / Print) ---- */
 .menu-bar {
