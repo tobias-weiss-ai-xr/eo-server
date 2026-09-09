@@ -252,9 +252,10 @@
     <span class="rb gal-sep" style="--rb-x: 1114px; --rb-y: 43px" aria-hidden="true"></span>
     <button class="gallery-preset gp-strong rb" style="--rb-x: 1214px; --rb-y: 43px" data-cmd="bold" title="Strong" aria-label="Strong style" aria-pressed="false"><span class="gp-strong-s">S</span></button>
     <button class="rb rb-flat" data-cmd="directionRtl" style="--rb-x: 1305px; --rb-y: 43px" title="Text direction" data-i18n-title="Toolbar.DirectionRtlTitle" aria-label="Text direction" data-i18n-aria-label="Toolbar.DirectionRtl" aria-pressed="false"><svg viewBox="0 0 10 12" width="10" height="12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 11 5 1l4 10M2.5 7.5h5"/></svg></button>
+    <button id="btn-ribbon-collapse" class="rb rb-flat" style="--rb-x: 1355px; --rb-y: 43px; padding: 6px 8px" title="Show fewer toolbar buttons" data-i18n-title="Toolbar.CollapseTitle" aria-label="Show fewer toolbar buttons" data-i18n-aria-label="Toolbar.CollapseTitle" aria-expanded="true" aria-controls="ribbon-row-2"><svg viewBox="0 0 14 8" width="14" height="8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5 7 6 12.5 1.5"/></svg></button>
     <button class="rb" data-cmd="removeFormat" style="--rb-x: 1269px; --rb-y: 43px" title="Clear formatting" aria-label="Clear formatting">&#9001;&#9002;</button>
     </div>
-    <div class="ribbon-row">
+    <div class="ribbon-row" id="ribbon-row-2">
     <!-- Paragraph styles, alignment, lists, layout + the style gallery
          (real formatBlock/removeFormat presets boxed like the golden). -->
     <button class="rb" data-cmd="formatBlock" data-value="H1" style="--rb-x: 32px" title="Heading 1 (Ctrl+Alt+1)" data-i18n-title="Toolbar.Heading1Title" aria-label="Heading 1" data-i18n-aria-label="Toolbar.Heading1Title" aria-pressed="false" aria-keyshortcuts="Control+Alt+1">H1</button>

@@ -296,6 +296,7 @@ body {
 /* --- OO-golden slot placement (rb/qa): absolutely positioned controls ---
    --rb-x/--qa-x is the component center; translate(-50%,-50%) centers on it. */
 .ribbon-row { position: relative; min-height: 24px; }
+.ribbon-row[hidden] { display: none; }
 .toolbar .ribbon-page.active { align-self: stretch; height: 100%; align-content: center; }
 /* single-tab pages (insert/layout/review): one centered row, no wrapping */
 .ribbon-page.active:not(.two-row) { flex-wrap: nowrap; align-items: center; }

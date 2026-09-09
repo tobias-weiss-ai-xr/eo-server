@@ -2855,6 +2855,14 @@
   });
   const printBtn = document.getElementById("btn-print-qa");
   if (printBtn) printBtn.addEventListener("click", () => window.print());
+  const rcBtn = document.getElementById("btn-ribbon-collapse");
+  if (rcBtn) rcBtn.addEventListener("click", () => {
+    const row2 = document.getElementById("ribbon-row-2");
+    if (!row2) return;
+    const hide = !row2.hasAttribute("hidden");
+    row2.toggleAttribute("hidden", hide);
+    rcBtn.setAttribute("aria-expanded", String(!hide));
+  });
   if (themeBtn) themeBtn.addEventListener("click", toggleTheme);
   if (fsBtn) fsBtn.addEventListener("click", toggleFullscreen);
   const fsTitlebar = document.querySelector(".titlebar-fs");
