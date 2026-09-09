@@ -752,7 +752,7 @@ def test_paragraph_rtl_and_line_spacing_roundtrip(servers):
 
             # Apply 1.5 line spacing via the dropdown then RTL on the same block.
             frame.select_option("#line-spacing", "1.5")
-            frame.locator("button.rb[data-cmd='directionRtl']").click()
+            frame.locator("button.rb[data-cmd='directionRtl']").first.click()
 
             html = frame.evaluate("document.getElementById('editor').innerHTML")
             assert 'line-height: 1.5' in html, html
@@ -806,7 +806,7 @@ def test_nested_list_tab_indent_roundtrip(servers):
             # paragraph into an <li>; type two items; Tab indents the second.
             frame.locator("#editor").press("Enter")
             frame.locator("#editor").press_sequentially("first item")
-            frame.locator("button[data-cmd='insertUnorderedList']").click()
+            frame.locator("button[data-cmd='insertUnorderedList']").first.click()
             frame.locator("#editor").press("End")
             frame.locator("#editor").press("Enter")
             frame.locator("#editor").press_sequentially("second item")

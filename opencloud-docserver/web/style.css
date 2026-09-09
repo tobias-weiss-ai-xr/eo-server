@@ -370,7 +370,35 @@ body {
   padding: 0 6px;
 }
 .gallery-preset:hover { border-color: var(--accent); }
-.gp-normal { width: 108px; height: 42px; }
+.gp-normal {
+  width: 112px; height: 42px;
+  border-color: var(--text);            /* selected style tile: boxed like the golden */
+  justify-content: flex-start;
+  padding-left: 12px;
+  font-size: 11px;
+}
+/* Flat icon buttons: no UA chrome (the capture renders default button
+   borders as dark ink boxes that break comp ratios). Ink = svg only. */
+.toolbar .rb-flat {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  min-width: 0;
+  height: auto;
+  padding: 2px;
+}
+.gp-strong { width: 42px; height: 42px; }
+.gp-strong-s { font-size: 15px; font-weight: 700; }
+.gal-sep {
+  width: 8px; height: 18px;
+  display: block;
+}
+.gal-sep::before, .gal-sep::after {
+  content: ""; position: absolute; left: 1px; width: 6px; height: 5px;
+  background: #888;
+}
+.gal-sep::before { top: 2px; }
+.gal-sep::after { bottom: 2px; }
 .gp-normal span { font-size: 15px; }
 .gp-title { height: 20px; }
 .gp-title span { font-size: 12px; }
