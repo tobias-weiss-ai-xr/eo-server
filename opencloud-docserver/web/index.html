@@ -85,12 +85,10 @@
   <!-- Title bar (OO-golden band y0–28): brand + document name left, view
        toggles right. Zoom lives in the status bar. -->
   <div class="titlebar">
-    <span class="brand" aria-hidden="true">W</span>
+    <span class="wordmark">WorldOffice</span>
     <span class="doc-name">WorldOffice</span>
-    <button type="button" class="ribbon-tab active" data-tab="home" role="tab" aria-selected="true" data-i18n="Tab.Home">Home</button>
-    <button type="button" class="ribbon-tab" data-tab="insert" role="tab" aria-selected="false" data-i18n="Tab.Insert">Insert</button>
-    <button type="button" class="ribbon-tab" data-tab="layout" role="tab" aria-selected="false" data-i18n="Tab.Layout">Layout</button>
-    <button type="button" class="ribbon-tab" data-tab="review" role="tab" aria-selected="false" data-i18n="Tab.Review">Review</button>
+    <button id="btn-save" type="button" class="titlebar-fs tb-ico" style="--tb-x: 140px" title="Save (Ctrl+S)" data-i18n-title="Toolbar.SaveTitle" aria-label="Save" data-i18n-aria-label="Toolbar.Save" aria-keyshortcuts="Control+S"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 2.5H4A1.5 1.5 0 0 0 2.5 4v8A1.5 1.5 0 0 0 4 13.5h8A1.5 1.5 0 0 0 13.5 12V5.5L10.5 2.5z"/><path d="M5.5 2.5V5h5V2.5M5.5 13.5v-4h5v4"/></svg></button>
+    <button id="btn-undo-tb" type="button" class="titlebar-fs tb-ico" style="--tb-x: 176px" data-cmd="undo" title="Undo (Ctrl+Z)" data-i18n-title="Toolbar.UndoTitle" aria-label="Undo (titlebar)" data-i18n-aria-label="Toolbar.Undo" aria-keyshortcuts="Control+Z"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5h6a3.5 3.5 0 1 1 0 7H6"/><path d="M6.5 4 3 7.5l3.5 3.5"/></svg></button>
     <span class="spacer"></span>
     <!-- Window control at the OO-golden titlebar corner: duplicates the
          ribbon fullscreen toggle (same pattern as the statusbar comment
@@ -119,14 +117,17 @@
       </ul>
     </div>
     <span class="sep"></span>
+    <!-- Ribbon tabs (OO-golden app-row slot pitch): real tab strip, same
+         .ribbon-tab pipeline as before the titlebar move. -->
+    <button type="button" class="ribbon-tab" data-tab="home" role="tab" aria-selected="true" style="--qa-x: 92px" data-i18n="Tab.Home">Home</button>
+    <button type="button" class="ribbon-tab" data-tab="insert" role="tab" aria-selected="false" style="--qa-x: 150px" data-i18n="Tab.Insert">Insert</button>
+    <button type="button" class="ribbon-tab" data-tab="layout" role="tab" aria-selected="false" style="--qa-x: 206px" data-i18n="Tab.Layout">Layout</button>
+    <button type="button" class="ribbon-tab" data-tab="review" role="tab" aria-selected="false" style="--qa-x: 264px" data-i18n="Tab.Review">Review</button>
     <!-- Quick-format cluster (OO-golden positions): text-labeled command
          duplicates of the ribbon controls — same data-cmd pipeline. -->
-    <button class="qa" data-cmd="bold" style="--qa-x: 206px" title="Bold (Ctrl+B)" data-i18n="Toolbar.Bold" aria-label="Bold" aria-pressed="false">Bold</button>
-    <button class="qa" data-cmd="italic" style="--qa-x: 265px" title="Italic (Ctrl+I)" data-i18n="Toolbar.Italic" aria-label="Italic" aria-pressed="false">Italic</button>
-    <button class="qa" data-cmd="underline" style="--qa-x: 341px" title="Underline (Ctrl+U)" data-i18n="Toolbar.Underline" aria-label="Underline" aria-pressed="false">Underline</button>
-    <button class="qa" data-cmd="subscript" style="--qa-x: 437px" title="Subscript" data-i18n="Toolbar.Subscript" aria-label="Subscript" aria-pressed="false">Subscript</button>
-    <button class="qa" data-cmd="superscript" style="--qa-x: 528px" title="Superscript" data-i18n-title="Toolbar.SuperscriptTitle" aria-label="Superscript" aria-pressed="false">Sup</button>
-    <select class="qa qa-select" id="font-family-qa" style="--qa-x: 92px" title="Font family" data-i18n-title="Toolbar.FontFamilyTitle" aria-label="Font family">
+    <button class="qa" data-cmd="underline" style="--qa-x: 436px" title="Underline (Ctrl+U)" data-i18n="Toolbar.Underline" aria-label="Underline" aria-pressed="false">Underline</button>
+    <button class="qa" data-cmd="bold" style="--qa-x: 528px" title="Bold (Ctrl+B)" data-i18n="Toolbar.Bold" aria-label="Bold" aria-pressed="false">Bold</button>
+    <select class="qa qa-select" id="font-family-qa" style="--qa-x: 341px" title="Font family" data-i18n-title="Toolbar.FontFamilyTitle" aria-label="Font family">
       <option value="" selected>Default</option>
       <option value="Arial">Arial</option>
       <option value="Courier New">Courier New</option>
@@ -134,7 +135,7 @@
       <option value="Times New Roman">Times New Roman</option>
       <option value="Verdana">Verdana</option>
     </select>
-    <select class="qa qa-select" id="font-size-qa" style="--qa-x: 150px" title="Font size" data-i18n-title="Toolbar.FontSizeTitle" aria-label="Font size">
+    <select class="qa qa-select" id="font-size-qa" style="--qa-x: 390px" title="Font size" data-i18n-title="Toolbar.FontSizeTitle" aria-label="Font size">
       <option value="1">8</option>
       <option value="2">10</option>
       <option value="3" selected>12</option>
@@ -147,6 +148,10 @@
     <button class="qa" data-cmd="formatBlock" data-value="H2" style="--qa-x: 655px" title="Heading 2" aria-label="Heading 2" aria-pressed="false">H2</button>
     <button class="qa" data-cmd="formatBlock" data-value="H3" style="--qa-x: 706px" title="Heading 3" aria-label="Heading 3" aria-pressed="false">H3</button>
     <button class="qa" id="btn-print-qa" style="--qa-x: 1303px" title="Print" data-i18n-title="Menu.Print" aria-label="Print"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6V2.5h7V6M4.5 12.5h-2a1 1 0 0 1-1-1V7.5a1.5 1.5 0 0 1 1.5-1.5h9a1.5 1.5 0 0 1 1.5 1.5v4a1 1 0 0 1-1 1h-2M4.5 10h7v4h-7z"/></svg></button>
+    <button class="qa" data-cmd="italic" style="--qa-x: 757px" title="Italic (Ctrl+I)" data-i18n="Toolbar.Italic" aria-label="Italic (quick access)" aria-pressed="false">Italic</button>
+    <button class="qa" data-cmd="subscript" style="--qa-x: 808px" title="Subscript" data-i18n="Toolbar.Subscript" aria-label="Subscript" aria-pressed="false">Subscript</button>
+    <button class="qa" data-cmd="superscript" style="--qa-x: 859px" title="Superscript" data-i18n-title="Toolbar.SuperscriptTitle" aria-label="Superscript" aria-pressed="false">Sup</button>
+    <button class="qa" id="btn-redo-qa" data-cmd="redo" style="--qa-x: 1404px" title="Redo (Ctrl+Y)" data-i18n-title="Toolbar.RedoTitle" aria-label="Redo (quick access)" data-i18n-aria-label="Toolbar.Redo" aria-keyshortcuts="Control+Y Control+Shift+Z"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 7.5h-6a3.5 3.5 0 1 0 0 7H10"/><path d="M9.5 4 13 7.5 9.5 11"/></svg></button>
     <div class="menu user-chip" id="user-chip" style="--qa-x: 1350px" hidden>
       <button type="button" id="user-chip-btn" class="user-chip-btn" aria-haspopup="true" aria-expanded="false">
         <span id="user-chip-name"></span>
@@ -160,7 +165,6 @@
       </div>
     </div>
     <span class="spacer"></span>
-    <button id="btn-save" class="primary" title="Save (Ctrl+S)" data-i18n="Toolbar.Save" data-i18n-title="Toolbar.SaveTitle" aria-label="Save" data-i18n-aria-label="Toolbar.Save" aria-keyshortcuts="Control+S">Save</button>
   </nav>
   <header id="toolbar" class="toolbar" role="toolbar" aria-label="Formatting toolbar" data-i18n-aria-label="Toolbar.Region">
     <!-- Format group: character styles, font size/family, text color, highlight -->

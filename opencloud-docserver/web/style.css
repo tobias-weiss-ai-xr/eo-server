@@ -158,18 +158,6 @@ body {
   font-size: 12px;
   color: var(--muted);
 }
-.titlebar .brand {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  background: var(--accent);
-  color: #fff;
-  font-weight: 700;
-  font-size: 11px;
-}
 .titlebar { position: relative; }
 .titlebar .doc-name {
   font-weight: 600;
@@ -190,6 +178,30 @@ body {
   color: var(--muted);
 }
 .titlebar .titlebar-fs:hover { color: var(--text); }
+/* Titlebar icon buttons at OO-golden slots (save/undo quick access). */
+.titlebar .tb-ico {
+  position: absolute;
+  left: var(--tb-x);
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+/* Product wordmark at the padding edge (OO golden: titlebar's left blob is
+   logo+product name centered ~x49; the document name stays centered). */
+.titlebar .wordmark {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--text);
+}
+/* Ribbon tabs live in the app row at the OO-golden tab pitch; 3px active
+   underline so it registers as ink (2px AA-spreads away at capture zoom). */
+.menu-bar .ribbon-tab {
+  position: absolute;
+  left: var(--qa-x);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-bottom-width: 3px;
+}
 .titlebar button {
   min-width: 24px;
   height: 22px;
