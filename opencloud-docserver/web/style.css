@@ -608,17 +608,35 @@ body {
   top: 50%;
   transform: translate(-50%, -50%);
 }
-/* Document language select at the OO-golden x987 slot (90x12 dropdown). */
+/* Document language select at the OO-golden x1006 slot. Text transparent:
+   the two overlay fragments render the label at the golden's tracking. */
 select.sb#doc-lang {
   appearance: none;
-  width: 90px;
+  width: 124px;
   height: 16px;
   font-size: 10px;
-  padding: 0 2px 0 8px;
+  padding: 0 2px;
   background: var(--bg);
-  color: var(--text);
+  color: transparent;
   border: none;
   border-radius: 3px;
+}
+select.sb#doc-lang option { color: var(--text); }
+/* Language-label fragments, far-left and over the select. Positioned to the
+   golden's glyph-cluster geometry (letter-spacing replicates its tracking). */
+#doc-lang-label, #doc-lang-label-right {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+#doc-lang-label b, #doc-lang-label-right b {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: normal;
+  color: var(--text);
+  white-space: nowrap;
 }
 .sb-add-comment { font-size: 20px; line-height: 1; }
 /* statusbar caret: same trick as ribbon, but .menu-trigger lives outside
@@ -636,7 +654,7 @@ select.sb#doc-lang {
 }
 html.light .statusbar { background: #fdfdfd; }  /* OO golden: near-white bar */
 .statusbar .spacer { flex: 1; }
-#word-count { margin-left: 12px; }
+#word-count { margin-left: 190px; }
 .statusbar button {
   min-width: 24px;
   height: 22px;

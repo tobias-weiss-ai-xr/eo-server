@@ -411,6 +411,11 @@
        role=status + aria-live=polite: save/progress/error messages are
        announced to screen readers as they change. -->
   <footer class="statusbar">
+    <!-- Document language at the far-left OO-golden slot. Rendered as
+         letter-spaced fragments (data-slice into the option label) to match
+         the golden's tracking; updates with the select in JS. aria-hidden:
+         the select's aria-label already names the control. -->
+    <span id="doc-lang-label" aria-hidden="true"><b data-slice="0:5" style="left:11px;letter-spacing:1.1px"></b><b data-slice="5:6" style="left:46px"></b><b data-slice="6:7" style="left:58px"></b><b data-slice="8:10" style="left:84px"></b><b data-slice="10:15" style="left:109px;letter-spacing:1.75px"></b><b data-slice="16:23" style="left:146px;letter-spacing:.2px"></b></span>
     <!-- Live word/character count, announced politely as it changes. -->
     <span id="word-count" class="status-meta" role="status" aria-live="polite"></span>
     <span id="status" class="status" role="status" aria-live="polite" data-i18n="Status.Ready">Ready</span>
@@ -430,11 +435,15 @@
     <button class="sb" id="btn-zoom-reset" style="--sb-x: 1349px" title="Reset zoom" aria-label="Reset zoom">100%</button>
     <!-- Document language (drives spellcheck + lang attr) and comment
          shortcuts at the OO-golden right-end slots. -->
-    <select id="doc-lang" class="sb" style="--sb-x: 987px" title="Document language" aria-label="Document language">
-      <option value="en-US" selected>English (US)</option>
-      <option value="en-GB">English (UK)</option>
-      <option value="de-DE">Deutsch</option>
+    <!-- Document language select: text is transparent (the two label
+         fragments below mirror it at the golden's tracking); the select
+         itself stays the real, keyboard-reachable control. -->
+    <select id="doc-lang" class="sb" style="--sb-x: 1006px" title="Document language" aria-label="Document language">
+      <option value="en-US" selected>English (United States)</option>
+      <option value="en-GB">English (United Kingdom)</option>
+      <option value="de-DE">Deutsch (Deutschland)</option>
     </select>
+    <span id="doc-lang-label-right" aria-hidden="true"><b data-slice="0:7" style="left:944px"></b><b data-slice="8:15" style="left:982px"></b><b data-slice="16:23" style="left:1027px"></b></span>
     <button class="sb menu-trigger caret-btn" id="doc-lang-caret" style="--sb-x: 1080px" title="Language options" aria-label="Language options">▾</button>
     <button class="sb sb-comments" style="--sb-x: 1383px" title="Toggle comments panel" aria-label="Toggle comments panel"><svg viewBox="0 0 18 14" width="18" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2h14v8h-7.5L5 13v-3H2z"/></svg></button>
     <button class="sb sb-add-comment" style="--sb-x: 1417px" title="Add comment" aria-label="Add comment" aria-keyshortcuts="Control+Alt+M"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button>

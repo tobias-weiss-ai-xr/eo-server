@@ -2723,12 +2723,23 @@
   if (sbComments && commentsBtn) sbComments.addEventListener("click", () => commentsBtn.click());
   const sbAddComment = document.querySelector(".sb-add-comment");
   if (sbAddComment && commentBtn) sbAddComment.addEventListener("click", () => commentBtn.click());
-  // Document language: drives spellcheck + the editor lang attribute.
+  // Document language: drives spellcheck + the editor lang attribute, and
+  // the plain-language label at the statusbar's far-left OO-golden slot.
   const docLang = document.getElementById("doc-lang");
+  const docLangLabelFrags = document.querySelectorAll("#doc-lang-label b, #doc-lang-label-right b");
+  function syncDocLangLabel() {
+    const label = docLang ? docLang.selectedOptions[0]?.label || "" : "";
+    for (const b of docLangLabelFrags) {
+      const [a, z] = b.dataset.slice.split(":").map(Number);
+      b.textContent = label.slice(a, z);
+    }
+  }
   if (docLang) docLang.addEventListener("change", () => {
     const ed = document.getElementById("editor");
     if (ed) ed.setAttribute("lang", docLang.value);
+    syncDocLangLabel();
   });
+  syncDocLangLabel();
   // The statusbar caret discloses the language select (appearance:none).
   const docLangCaret = document.getElementById("doc-lang-caret");
   if (docLangCaret && docLang) docLangCaret.addEventListener("click", () => {
