@@ -92,8 +92,6 @@
     <button type="button" class="ribbon-tab" data-tab="layout" role="tab" aria-selected="false" data-i18n="Tab.Layout">Layout</button>
     <button type="button" class="ribbon-tab" data-tab="review" role="tab" aria-selected="false" data-i18n="Tab.Review">Review</button>
     <span class="spacer"></span>
-    <button id="btn-theme" title="Toggle dark/light theme" aria-label="Toggle theme" aria-pressed="false">☾</button>
-    <button id="btn-fullscreen" title="Toggle fullscreen" aria-label="Toggle fullscreen">⛶</button>
   </div>
   <nav id="menu-bar" class="menu-bar" aria-label="Application menu" data-i18n-aria-label="MenuBar.Region">
     <div class="menu">
@@ -117,27 +115,22 @@
       </ul>
     </div>
     <span class="sep"></span>
-    <button id="btn-undo" data-cmd="undo" title="Undo (Ctrl+Z)" data-i18n-title="Toolbar.UndoTitle" aria-label="Undo" data-i18n-aria-label="Toolbar.Undo" aria-keyshortcuts="Control+Z">↶</button>
-    <button id="btn-redo" data-cmd="redo" title="Redo (Ctrl+Y)" data-i18n-title="Toolbar.RedoTitle" aria-label="Redo" data-i18n-aria-label="Toolbar.Redo" aria-keyshortcuts="Control+Y Control+Shift+Z">↷</button>
-    <span class="spacer"></span>
-    <button id="btn-save" class="primary" title="Save (Ctrl+S)" data-i18n="Toolbar.Save" data-i18n-title="Toolbar.SaveTitle" aria-label="Save" data-i18n-aria-label="Toolbar.Save" aria-keyshortcuts="Control+S">Save</button>
-  </nav>
-  <header id="toolbar" class="toolbar" role="toolbar" aria-label="Formatting toolbar" data-i18n-aria-label="Toolbar.Region">
-    <!-- Format group: character styles, font size/family, text color, highlight -->
-    <!-- aria-pressed reflects the live on/off state (JS updateActiveStates);
-         aria-keyshortcuts mirrors the keyboard shortcuts handled in editor.js. -->
-    <div class="ribbon-page two-row active" data-tab="home" role="group" aria-label="Home ribbon" data-i18n-aria-label="Toolbar.Region">
-    <div class="ribbon-row">
-    <button data-cmd="bold" title="Bold (Ctrl+B)" data-i18n-title="Toolbar.BoldTitle" aria-label="Bold" data-i18n-aria-label="Toolbar.Bold" aria-pressed="false" aria-keyshortcuts="Control+B">B</button>
-    <button data-cmd="italic" title="Italic (Ctrl+I)" data-i18n-title="Toolbar.ItalicTitle" aria-label="Italic" data-i18n-aria-label="Toolbar.Italic" aria-pressed="false" aria-keyshortcuts="Control+I"><i>I</i></button>
-    <button data-cmd="underline" title="Underline (Ctrl+U)" data-i18n-title="Toolbar.UnderlineTitle" aria-label="Underline" data-i18n-aria-label="Toolbar.Underline" aria-pressed="false" aria-keyshortcuts="Control+U"><u>U</u></button>
-    <button data-cmd="strikeThrough" title="Strikethrough" data-i18n-title="Toolbar.StrikethroughTitle" aria-label="Strikethrough" data-i18n-aria-label="Toolbar.Strikethrough" aria-pressed="false"><s>S</s></button>
-    <button data-cmd="superscript" title="Superscript" data-i18n-title="Toolbar.SuperscriptTitle" aria-label="Superscript" data-i18n-aria-label="Toolbar.Superscript" aria-pressed="false"><sup>x²</sup></button>
-    <button data-cmd="subscript" title="Subscript" data-i18n-title="Toolbar.SubscriptTitle" aria-label="Subscript" data-i18n-aria-label="Toolbar.Subscript" aria-pressed="false"><sub>x₂</sub></button>
-    <button data-cmd="smallCaps" title="Small caps" data-i18n-title="Toolbar.SmallCapsTitle" aria-label="Small caps" data-i18n-aria-label="Toolbar.SmallCaps" aria-pressed="false">SC</button>
-    <button data-cmd="allCaps" title="Uppercase" data-i18n-title="Toolbar.AllCapsTitle" aria-label="Uppercase" data-i18n-aria-label="Toolbar.AllCaps" aria-pressed="false">A̲</button>
-    <button data-cmd="code" title="Inline code" data-i18n-title="Toolbar.CodeTitle" aria-label="Inline code" data-i18n-aria-label="Toolbar.Code" aria-pressed="false">&lt;/&gt;</button>
-    <select id="font-size" class="toolbar-select" title="Font size" data-i18n-title="Toolbar.FontSizeTitle" aria-label="Font size">
+    <!-- Quick-format cluster (OO-golden positions): text-labeled command
+         duplicates of the ribbon controls — same data-cmd pipeline. -->
+    <button class="qa" data-cmd="bold" style="--qa-x: 206px" title="Bold (Ctrl+B)" data-i18n="Toolbar.Bold" aria-label="Bold" aria-pressed="false">Bold</button>
+    <button class="qa" data-cmd="italic" style="--qa-x: 265px" title="Italic (Ctrl+I)" data-i18n="Toolbar.Italic" aria-label="Italic" aria-pressed="false">Italic</button>
+    <button class="qa" data-cmd="underline" style="--qa-x: 341px" title="Underline (Ctrl+U)" data-i18n="Toolbar.Underline" aria-label="Underline" aria-pressed="false">Underline</button>
+    <button class="qa" data-cmd="subscript" style="--qa-x: 437px" title="Subscript" data-i18n="Toolbar.Subscript" aria-label="Subscript" aria-pressed="false">Subscript</button>
+    <button class="qa" data-cmd="superscript" style="--qa-x: 528px" title="Superscript" data-i18n-title="Toolbar.SuperscriptTitle" aria-label="Superscript" aria-pressed="false">Sup</button>
+    <select class="qa qa-select" id="font-family-qa" style="--qa-x: 92px" title="Font family" data-i18n-title="Toolbar.FontFamilyTitle" aria-label="Font family">
+      <option value="" selected>Default</option>
+      <option value="Arial">Arial</option>
+      <option value="Courier New">Courier New</option>
+      <option value="Georgia">Georgia</option>
+      <option value="Times New Roman">Times New Roman</option>
+      <option value="Verdana">Verdana</option>
+    </select>
+    <select class="qa qa-select" id="font-size-qa" style="--qa-x: 150px" title="Font size" data-i18n-title="Toolbar.FontSizeTitle" aria-label="Font size">
       <option value="1">8</option>
       <option value="2">10</option>
       <option value="3" selected>12</option>
@@ -146,7 +139,26 @@
       <option value="6">24</option>
       <option value="7">36</option>
     </select>
-    <select id="font-family" class="toolbar-select" title="Font family" data-i18n-title="Toolbar.FontFamilyTitle" aria-label="Font family">
+    <button class="qa" data-cmd="formatBlock" data-value="H1" style="--qa-x: 595px" title="Heading 1" aria-label="Heading 1" aria-pressed="false">H1</button>
+    <button class="qa" data-cmd="formatBlock" data-value="H2" style="--qa-x: 655px" title="Heading 2" aria-label="Heading 2" aria-pressed="false">H2</button>
+    <button class="qa" data-cmd="formatBlock" data-value="H3" style="--qa-x: 706px" title="Heading 3" aria-label="Heading 3" aria-pressed="false">H3</button>
+    <button class="qa" id="btn-print-qa" style="--qa-x: 1303px" title="Print" data-i18n-title="Menu.Print" aria-label="Print"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6V2.5h7V6M4.5 12.5h-2a1 1 0 0 1-1-1V7.5a1.5 1.5 0 0 1 1.5-1.5h9a1.5 1.5 0 0 1 1.5 1.5v4a1 1 0 0 1-1 1h-2M4.5 10h7v4h-7z"/></svg></button>
+    <span class="qa save-mirror" id="save-mirror" style="--qa-x: 1336px" role="status" aria-live="polite"></span>
+    <span class="spacer"></span>
+    <button id="btn-save" class="primary" title="Save (Ctrl+S)" data-i18n="Toolbar.Save" data-i18n-title="Toolbar.SaveTitle" aria-label="Save" data-i18n-aria-label="Toolbar.Save" aria-keyshortcuts="Control+S">Save</button>
+  </nav>
+  <header id="toolbar" class="toolbar" role="toolbar" aria-label="Formatting toolbar" data-i18n-aria-label="Toolbar.Region">
+    <!-- Format group: character styles, font size/family, text color, highlight -->
+    <!-- aria-pressed reflects the live on/off state (JS updateActiveStates);
+         aria-keyshortcuts mirrors the keyboard shortcuts handled in editor.js. -->
+    <div class="ribbon-page two-row active" data-tab="home" role="group" aria-label="Home ribbon" data-i18n-aria-label="Toolbar.Region">
+    <!-- Positions mirror the OnlyOffice golden component map (rb = OO slot).
+         Quick-access undo/redo head the ribbon; font selects and character
+         commands follow; the style gallery holds real formatBlock presets. -->
+    <div class="ribbon-row">
+    <button id="btn-undo" class="rb" style="--rb-x: 32px" data-cmd="undo" title="Undo (Ctrl+Z)" data-i18n-title="Toolbar.UndoTitle" aria-label="Undo" data-i18n-aria-label="Toolbar.Undo" aria-keyshortcuts="Control+Z"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5h6a3.5 3.5 0 1 1 0 7H6"/><path d="M6.5 4 3 7.5l3.5 3.5"/></svg></button>
+    <button id="btn-redo" class="rb" style="--rb-x: 66px" data-cmd="redo" title="Redo (Ctrl+Y)" data-i18n-title="Toolbar.RedoTitle" aria-label="Redo" data-i18n-aria-label="Toolbar.Redo" aria-keyshortcuts="Control+Y Control+Shift+Z"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 7.5h-6a3.5 3.5 0 1 0 0 7H10"/><path d="M9.5 4 13 7.5 9.5 11"/></svg></button>
+    <select id="font-family" class="toolbar-select rb bare" style="--rb-x: 153px" title="Font family" data-i18n-title="Toolbar.FontFamilyTitle" aria-label="Font family">
       <option value="" selected>Default</option>
       <option value="Arial">Arial</option>
       <option value="Courier New">Courier New</option>
@@ -154,37 +166,60 @@
       <option value="Times New Roman">Times New Roman</option>
       <option value="Verdana">Verdana</option>
     </select>
-    <label class="color-btn" title="Text color" data-i18n-title="Toolbar.TextColorTitle">
+    <select id="font-size" class="toolbar-select rb bare" style="--rb-x: 239px" title="Font size" data-i18n-title="Toolbar.FontSizeTitle" aria-label="Font size">
+      <option value="1">8</option>
+      <option value="2">10</option>
+      <option value="3" selected>12</option>
+      <option value="4">14</option>
+      <option value="5">18</option>
+      <option value="6">24</option>
+      <option value="7">36</option>
+    </select>
+    <button class="rb" data-cmd="bold" style="--rb-x: 289px" title="Bold (Ctrl+B)" data-i18n-title="Toolbar.BoldTitle" aria-label="Bold" data-i18n-aria-label="Toolbar.Bold" aria-pressed="false" aria-keyshortcuts="Control+B"><b>B</b></button>
+    <button class="rb" data-cmd="italic" style="--rb-x: 318px" title="Italic (Ctrl+I)" data-i18n-title="Toolbar.ItalicTitle" aria-label="Italic" data-i18n-aria-label="Toolbar.Italic" aria-pressed="false" aria-keyshortcuts="Control+I"><i>I</i></button>
+    <button class="rb" data-cmd="underline" style="--rb-x: 347px" title="Underline (Ctrl+U)" data-i18n-title="Toolbar.UnderlineTitle" aria-label="Underline" data-i18n-aria-label="Toolbar.Underline" aria-pressed="false" aria-keyshortcuts="Control+U"><u>U</u></button>
+    <button class="rb" data-cmd="strikeThrough" style="--rb-x: 408px" title="Strikethrough" data-i18n-title="Toolbar.StrikethroughTitle" aria-label="Strikethrough" data-i18n-aria-label="Toolbar.Strikethrough" aria-pressed="false"><s>S</s></button>
+    <button class="rb" data-cmd="smallCaps" style="--rb-x: 448px" title="Small caps" data-i18n-title="Toolbar.SmallCapsTitle" aria-label="Small caps" data-i18n-aria-label="Toolbar.SmallCaps" aria-pressed="false">SC</button>
+    <button class="rb" data-cmd="superscript" style="--rb-x: 481px" title="Superscript" data-i18n-title="Toolbar.SuperscriptTitle" aria-label="Superscript" data-i18n-aria-label="Toolbar.Superscript" aria-pressed="false"><sup>x&sup2;</sup></button>
+    <button class="rb" data-cmd="subscript" style="--rb-x: 497px" title="Subscript" data-i18n-title="Toolbar.SubscriptTitle" aria-label="Subscript" data-i18n-aria-label="Toolbar.Subscript" aria-pressed="false"><sub>x₂</sub></button>
+    <label class="color-btn rb" style="--rb-x: 528px" title="Text color" data-i18n-title="Toolbar.TextColorTitle">
       <span class="color-key" aria-hidden="true">A</span>
       <input type="color" id="text-color" value="#333333" aria-label="Text color">
     </label>
-    <label class="color-btn" title="Highlight color" data-i18n-title="Toolbar.HighlightTitle">
+    <label class="color-btn rb" style="--rb-x: 568px" title="Highlight color" data-i18n-title="Toolbar.HighlightTitle">
       <span class="color-key key-highlight" aria-hidden="true">A</span>
       <input type="color" id="highlight-color" value="#ffe97a" aria-label="Highlight color">
     </label>
+    <button class="rb" data-cmd="code" style="--rb-x: 609px" title="Inline code" data-i18n-title="Toolbar.CodeTitle" aria-label="Inline code" data-i18n-aria-label="Toolbar.Code" aria-pressed="false">&lt;/&gt;</button>
+    <button class="rb" data-cmd="directionRtl" style="--rb-x: 649px" title="Right-to-left paragraph" data-i18n-title="Toolbar.DirectionRtlTitle" aria-label="Right-to-left" data-i18n-aria-label="Toolbar.DirectionRtl" aria-pressed="false">RTL</button>
+        <button class="rb" data-cmd="allCaps" style="--rb-x: 589px" title="All caps" data-i18n-title="Toolbar.AllCapsTitle" aria-label="All caps" data-i18n-aria-label="Toolbar.AllCaps" aria-pressed="false">AA</button>
+    <button id="btn-find" class="rb" style="--rb-x: 689px" title="Find and replace (Ctrl+F)" data-i18n-title="Toolbar.FindTitle" aria-label="Find and replace" data-i18n-aria-label="Toolbar.Find" aria-keyshortcuts="Control+F">⌕</button>
+    <button id="btn-theme" class="rb" style="--rb-x: 1392px" title="Toggle dark/light theme" aria-label="Toggle theme" aria-pressed="false">☾</button>
+    <!-- Style gallery: boxed formatBlock/removeFormat presets (row1 lower
+         half — the golden gallery spans both rows, centered y≈98) -->
+    <button class="gallery-preset gp-normal rb" style="--rb-x: 741px; --rb-y: 43px" data-cmd="formatBlock" data-value="P" title="Normal text" aria-label="Normal text style"><span>Normal</span></button>
+    <button class="gallery-preset gp-title rb" style="--rb-x: 838px; --rb-y: 43px" data-cmd="formatBlock" data-value="H4" title="Title" aria-label="Title style"><span>Title</span></button>
+    <button class="gallery-preset gp-h1 rb" style="--rb-x: 963px; --rb-y: 43px" data-cmd="formatBlock" data-value="H1" title="Heading 1" aria-label="Heading 1 style"><span>Heading 1</span></button>
+    <button class="gallery-preset gp-h2 rb" style="--rb-x: 1066px; --rb-y: 43px" data-cmd="formatBlock" data-value="H2" title="Heading 2" aria-label="Heading 2 style"><span>Heading 2</span></button>
+    <button class="gallery-preset gp-h3 rb" style="--rb-x: 1170px; --rb-y: 43px" data-cmd="formatBlock" data-value="H3" title="Heading 3" aria-label="Heading 3 style"><span>Heading 3</span></button>
+    <button class="rb" data-cmd="removeFormat" style="--rb-x: 1269px; --rb-y: 43px" title="Clear formatting" aria-label="Clear formatting">&#9001;&#9002;</button>
     </div>
     <div class="ribbon-row">
-    <span class="sep"></span>
-    <!-- Paragraph styles: headings + paragraph reset -->
-    <button data-cmd="formatBlock" data-value="H1" title="Heading 1 (Ctrl+Alt+1)" data-i18n-title="Toolbar.Heading1Title" aria-label="Heading 1" data-i18n-aria-label="Toolbar.Heading1Title" aria-pressed="false" aria-keyshortcuts="Control+Alt+1">H1</button>
-    <button data-cmd="formatBlock" data-value="H2" title="Heading 2 (Ctrl+Alt+2)" data-i18n-title="Toolbar.Heading2Title" aria-label="Heading 2" data-i18n-aria-label="Toolbar.Heading2Title" aria-pressed="false" aria-keyshortcuts="Control+Alt+2">H2</button>
-    <button data-cmd="formatBlock" data-value="H3" title="Heading 3 (Ctrl+Alt+3)" data-i18n-title="Toolbar.Heading3Title" aria-label="Heading 3" data-i18n-aria-label="Toolbar.Heading3Title" aria-pressed="false" aria-keyshortcuts="Control+Alt+3">H3</button>
-    <button data-cmd="formatBlock" data-value="P" title="Paragraph (Ctrl+Alt+0)" data-i18n-title="Toolbar.ParagraphTitle" aria-label="Paragraph" data-i18n-aria-label="Toolbar.ParagraphTitle" aria-pressed="false" aria-keyshortcuts="Control+Alt+0">¶</button>
-    <span class="sep"></span>
-    <!-- Alignment group -->
-    <button data-cmd="justifyLeft" title="Align left (Ctrl+Shift+L)" data-i18n-title="Toolbar.AlignLeftTitle" aria-label="Align left" data-i18n-aria-label="Toolbar.AlignLeft" aria-pressed="false" aria-keyshortcuts="Control+Shift+L"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 3.5h10M1.5 7h13M1.5 10.5h10M1.5 14h13"/></svg></button>
-    <button data-cmd="justifyCenter" title="Center (Ctrl+E)" data-i18n-title="Toolbar.AlignCenterTitle" aria-label="Center" data-i18n-aria-label="Toolbar.AlignCenter" aria-pressed="false" aria-keyshortcuts="Control+E"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2.5 3.5h11M1.5 7h13M2.5 10.5h11M1.5 14h13"/></svg></button>
-    <button data-cmd="justifyRight" title="Align right (Ctrl+R)" data-i18n-title="Toolbar.AlignRightTitle" aria-label="Align right" data-i18n-aria-label="Toolbar.AlignRight" aria-pressed="false" aria-keyshortcuts="Control+R"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4.5 3.5h10M1.5 7h13M4.5 10.5h10M1.5 14h13"/></svg></button>
-    <button data-cmd="justifyFull" title="Justify (Ctrl+J)" data-i18n-title="Toolbar.AlignJustifyTitle" aria-label="Justify" data-i18n-aria-label="Toolbar.AlignJustify" aria-pressed="false" aria-keyshortcuts="Control+J"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 3.5h13M1.5 7h13M1.5 10.5h13M1.5 14h13"/></svg></button>
-    <button data-cmd="directionRtl" title="Right-to-left paragraph" data-i18n-title="Toolbar.DirectionRtlTitle" aria-label="Right-to-left" data-i18n-aria-label="Toolbar.DirectionRtl" aria-pressed="false">RTL</button>
-    <span class="sep"></span>
-    <button data-cmd="insertUnorderedList" title="Bullet list (Ctrl+Shift+8)" data-i18n-title="Toolbar.BulletListTitle" aria-label="Bullet list" data-i18n-aria-label="Toolbar.BulletList" aria-pressed="false" aria-keyshortcuts="Control+Shift+8">•≡</button>
-    <button data-cmd="insertOrderedList" title="Numbered list (Ctrl+Shift+7)" data-i18n-title="Toolbar.NumberedListTitle" aria-label="Numbered list" data-i18n-aria-label="Toolbar.NumberedList" aria-pressed="false" aria-keyshortcuts="Control+Shift+7">1≡</button>
-    <span class="sep"></span>
-    <!-- Layout group: indent/outdent + line spacing -->
-    <button data-cmd="indent" title="Increase indent" data-i18n-title="Toolbar.IndentTitle" aria-label="Increase indent" data-i18n-aria-label="Toolbar.Indent"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2.5v11M8.5 8H14.5M5 5.5 8 8l-3 2.5"/></svg></button>
-    <button data-cmd="outdent" title="Decrease indent" data-i18n-title="Toolbar.OutdentTitle" aria-label="Decrease indent" data-i18n-aria-label="Toolbar.Outdent"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2.5v11M1.5 8H8M11.5 5.5 8.5 8l3 2.5"/></svg></button>
-    <select id="line-spacing" class="toolbar-select" title="Line spacing" data-i18n-title="Toolbar.LineSpacingTitle" aria-label="Line spacing">
+    <!-- Paragraph styles, alignment, lists, layout + the style gallery
+         (real formatBlock/removeFormat presets boxed like the golden). -->
+    <button class="rb" data-cmd="formatBlock" data-value="H1" style="--rb-x: 32px" title="Heading 1 (Ctrl+Alt+1)" data-i18n-title="Toolbar.Heading1Title" aria-label="Heading 1" data-i18n-aria-label="Toolbar.Heading1Title" aria-pressed="false" aria-keyshortcuts="Control+Alt+1">H1</button>
+    <button class="rb" data-cmd="formatBlock" data-value="H2" style="--rb-x: 66px" title="Heading 2 (Ctrl+Alt+2)" data-i18n-title="Toolbar.Heading2Title" aria-label="Heading 2" data-i18n-aria-label="Toolbar.Heading2Title" aria-pressed="false" aria-keyshortcuts="Control+Alt+2">H2</button>
+    <button class="rb" data-cmd="formatBlock" data-value="H3" style="--rb-x: 111px" title="Heading 3 (Ctrl+Alt+3)" data-i18n-title="Toolbar.Heading3Title" aria-label="Heading 3" data-i18n-aria-label="Toolbar.Heading3Title" aria-pressed="false" aria-keyshortcuts="Control+Alt+3">H3</button>
+    <button class="rb" data-cmd="formatBlock" data-value="P" style="--rb-x: 139px" title="Paragraph (Ctrl+Alt+0)" data-i18n-title="Toolbar.ParagraphTitle" aria-label="Paragraph" data-i18n-aria-label="Toolbar.ParagraphTitle" aria-pressed="false" aria-keyshortcuts="Control+Alt+0">&para;</button>
+    <button class="rb" data-cmd="justifyLeft" style="--rb-x: 167px" title="Align left (Ctrl+Shift+L)" data-i18n-title="Toolbar.AlignLeftTitle" aria-label="Align left" data-i18n-aria-label="Toolbar.AlignLeft" aria-pressed="false" aria-keyshortcuts="Control+Shift+L"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 3.5h10M1.5 7h13M1.5 10.5h10M1.5 14h13"/></svg></button>
+    <button class="rb" data-cmd="justifyCenter" style="--rb-x: 195px" title="Center (Ctrl+E)" data-i18n-title="Toolbar.AlignCenterTitle" aria-label="Center" data-i18n-aria-label="Toolbar.AlignCenter" aria-pressed="false" aria-keyshortcuts="Control+E"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2.5 3.5h11M1.5 7h13M2.5 10.5h11M1.5 14h13"/></svg></button>
+    <button class="rb" data-cmd="justifyRight" style="--rb-x: 223px" title="Align right (Ctrl+R)" data-i18n-title="Toolbar.AlignRightTitle" aria-label="Align right" data-i18n-aria-label="Toolbar.AlignRight" aria-pressed="false" aria-keyshortcuts="Control+R"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4.5 3.5h10M1.5 7h13M4.5 10.5h10M1.5 14h13"/></svg></button>
+    <button class="rb" data-cmd="justifyFull" style="--rb-x: 251px" title="Justify (Ctrl+J)" data-i18n-title="Toolbar.AlignJustifyTitle" aria-label="Justify" data-i18n-aria-label="Toolbar.AlignJustify" aria-pressed="false" aria-keyshortcuts="Control+J"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 3.5h13M1.5 7h13M1.5 10.5h13M1.5 14h13"/></svg></button>
+    <button class="rb" data-cmd="insertUnorderedList" style="--rb-x: 279px" title="Bullet list (Ctrl+Shift+8)" data-i18n-title="Toolbar.BulletListTitle" aria-label="Bullet list" data-i18n-aria-label="Toolbar.BulletList" aria-pressed="false" aria-keyshortcuts="Control+Shift+8">&bull;&equiv;</button>
+    <button class="rb" data-cmd="insertOrderedList" style="--rb-x: 321px" title="Numbered list (Ctrl+Shift+7)" data-i18n-title="Toolbar.NumberedListTitle" aria-label="Numbered list" data-i18n-aria-label="Toolbar.NumberedList" aria-pressed="false" aria-keyshortcuts="Control+Shift+7">1&equiv;</button>
+    <button class="rb" data-cmd="indent" style="--rb-x: 568px" title="Increase indent" data-i18n-title="Toolbar.IndentTitle" aria-label="Increase indent" data-i18n-aria-label="Toolbar.Indent"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2.5v11M8.5 8H14.5M5 5.5 8 8l-3 2.5"/></svg></button>
+    <button class="rb" data-cmd="outdent" style="--rb-x: 608px" title="Decrease indent" data-i18n-title="Toolbar.OutdentTitle" aria-label="Decrease indent" data-i18n-aria-label="Toolbar.Outdent"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2.5v11M1.5 8H8M11.5 5.5 8.5 8l3 2.5"/></svg></button>
+    <select id="line-spacing" class="toolbar-select rb bare" style="--rb-x: 649px" title="Line spacing" data-i18n-title="Toolbar.LineSpacingTitle" aria-label="Line spacing">
       <option value="" selected>Spacing</option>
       <option value="1">1.0</option>
       <option value="1.15">1.15</option>
@@ -193,7 +228,8 @@
       <option value="2.5">2.5</option>
       <option value="3">3.0</option>
     </select>
-    <span class="sep"></span>
+    <button id="btn-fullscreen" class="rb" style="--rb-x: 1392px" title="Toggle fullscreen" aria-label="Toggle fullscreen">⛶</button>
+    <!-- Style gallery: boxed formatBlock/removeFormat presets -->
     </div>
     </div>
     <div class="ribbon-page" data-tab="insert" role="group" aria-label="Insert ribbon">
@@ -202,17 +238,17 @@
     <button id="btn-image" title="Insert image" data-i18n-title="Toolbar.InsertImageTitle" aria-label="Insert image" data-i18n-aria-label="Toolbar.InsertImageTitle">🖼</button>
     <button id="btn-link" title="Insert link" aria-label="Insert link">🔗</button>
     <button id="btn-hr" title="Insert horizontal rule" aria-label="Insert horizontal rule">─</button>
+<button id="btn-toc" title="Insert table of contents" aria-label="Insert table of contents">☰</button>
+<button id="btn-object" title="Insert object" aria-label="Insert object">▢</button>
+<button id="btn-bookmark" title="Insert bookmark" aria-label="Insert bookmark">📑</button>
+<button id="btn-crossref" title="Insert cross-reference" aria-label="Insert cross-reference">🔗</button>
+<button id="btn-symbol" title="Insert symbol" aria-label="Insert symbol">Ω</button>
+<button id="btn-datetime" title="Insert date" aria-label="Insert date">📅</button>
     </div>
     <div class="ribbon-page" data-tab="layout" role="group" aria-label="Layout ribbon">
     <button id="btn-page-break" title="Insert page break" aria-label="Insert page break">⏎</button>
     <button id="btn-section-break" title="Insert section break" aria-label="Insert section break">⇘</button>
     <button id="btn-columns" title="Insert columns" aria-label="Insert columns">▥</button>
-    </div>
-    <div class="ribbon-page" data-tab="insert" role="group" aria-label="Insert ribbon (continued)">
-    <button id="btn-toc" title="Insert table of contents" aria-label="Insert table of contents">☰</button>
-    <button id="btn-object" title="Insert object" aria-label="Insert object">▢</button>
-    <button id="btn-bookmark" title="Insert bookmark" aria-label="Insert bookmark">📑</button>
-    <button id="btn-crossref" title="Insert cross-reference" aria-label="Insert cross-reference">🔗</button>
     </div>
     <div class="ribbon-page" data-tab="review" role="group" aria-label="Review ribbon">
     <button id="btn-track-changes" title="Track changes" aria-label="Track changes" aria-pressed="false">✎</button>
@@ -220,18 +256,101 @@
     <button id="btn-comment" title="Add comment" aria-label="Add comment">💬</button>
     <button id="btn-comments" title="Show comments" aria-label="Show comments">◫</button>
     </div>
-    <div class="ribbon-page" data-tab="insert" role="group" aria-label="Insert ribbon (continued)">
-    <button id="btn-symbol" title="Insert symbol" aria-label="Insert symbol">Ω</button>
-    <button id="btn-datetime" title="Insert date" aria-label="Insert date">📅</button>
-    </div>
-    <div class="ribbon-page active" data-tab="home" role="group" aria-label="Home ribbon (continued)">
-    <button id="btn-find" title="Find and replace (Ctrl+F)" data-i18n-title="Toolbar.FindTitle" aria-label="Find and replace" data-i18n-aria-label="Toolbar.Find" aria-keyshortcuts="Control+F">⌕</button>
-    </div>
   </header>
 
-  <!-- Ruler (OO-golden band: ticks over the page width, backdrop elsewhere).
-       Decorative visual-parity element; aria-hidden. -->
-  <div class="ruler" aria-hidden="true"><div class="ruler-track"></div></div>
+  <!-- Ruler (OO-golden band): real mm/cm scale over the page width — minor
+       ticks every 2.5mm, cm numbers, indent + margin handles. Decorative
+       visual-parity surface; aria-hidden. -->
+  <div class="ruler" aria-hidden="true"><div class="ruler-track"></div>
+<svg class="ruler-svg" viewBox="0 0 1440 34" preserveAspectRatio="none" aria-hidden="true">
+  <g fill="#6b6b6b">
+    <rect x="325.75" y="18.0" width="1.5" height="9"/>
+    <rect x="335.20" y="19.5" width="1.5" height="6"/>
+    <text x="345.4" y="25" text-anchor="middle">1</text>
+    <rect x="354.10" y="19.5" width="1.5" height="6"/>
+    <rect x="363.55" y="18.0" width="1.5" height="9"/>
+    <rect x="373.00" y="19.5" width="1.5" height="6"/>
+    <text x="383.2" y="25" text-anchor="middle">2</text>
+    <rect x="391.90" y="19.5" width="1.5" height="6"/>
+    <rect x="401.35" y="18.0" width="1.5" height="9"/>
+    <rect x="410.80" y="19.5" width="1.5" height="6"/>
+    <rect x="429.70" y="19.5" width="1.5" height="6"/>
+    <rect x="439.15" y="18.0" width="1.5" height="9"/>
+    <rect x="448.60" y="19.5" width="1.5" height="6"/>
+    <text x="458.8" y="25" text-anchor="middle">4</text>
+    <rect x="467.50" y="19.5" width="1.5" height="6"/>
+    <rect x="476.95" y="18.0" width="1.5" height="9"/>
+    <rect x="486.40" y="19.5" width="1.5" height="6"/>
+    <text x="496.6" y="25" text-anchor="middle">5</text>
+    <rect x="505.30" y="19.5" width="1.5" height="6"/>
+    <rect x="514.75" y="18.0" width="1.5" height="9"/>
+    <rect x="524.20" y="19.5" width="1.5" height="6"/>
+    <text x="534.4" y="25" text-anchor="middle">6</text>
+    <rect x="543.10" y="19.5" width="1.5" height="6"/>
+    <rect x="552.55" y="18.0" width="1.5" height="9"/>
+    <rect x="562.00" y="19.5" width="1.5" height="6"/>
+    <text x="572.2" y="25" text-anchor="middle">7</text>
+    <rect x="580.90" y="19.5" width="1.5" height="6"/>
+    <rect x="590.35" y="18.0" width="1.5" height="9"/>
+    <rect x="599.80" y="19.5" width="1.5" height="6"/>
+    <text x="610.0" y="25" text-anchor="middle">8</text>
+    <rect x="618.70" y="19.5" width="1.5" height="6"/>
+    <rect x="628.15" y="18.0" width="1.5" height="9"/>
+    <rect x="637.60" y="19.5" width="1.5" height="6"/>
+    <text x="647.8" y="25" text-anchor="middle">9</text>
+    <rect x="656.50" y="19.5" width="1.5" height="6"/>
+    <rect x="665.95" y="18.0" width="1.5" height="9"/>
+    <rect x="675.40" y="19.5" width="1.5" height="6"/>
+    <text x="685.6" y="25" text-anchor="middle">10</text>
+    <rect x="694.30" y="19.5" width="1.5" height="6"/>
+    <rect x="703.75" y="18.0" width="1.5" height="9"/>
+    <rect x="713.20" y="19.5" width="1.5" height="6"/>
+    <text x="723.4" y="25" text-anchor="middle">11</text>
+    <rect x="732.10" y="19.5" width="1.5" height="6"/>
+    <rect x="741.55" y="18.0" width="1.5" height="9"/>
+    <rect x="751.00" y="19.5" width="1.5" height="6"/>
+    <text x="761.2" y="25" text-anchor="middle">12</text>
+    <rect x="769.90" y="19.5" width="1.5" height="6"/>
+    <rect x="779.35" y="18.0" width="1.5" height="9"/>
+    <rect x="788.80" y="19.5" width="1.5" height="6"/>
+    <text x="799.0" y="25" text-anchor="middle">13</text>
+    <rect x="807.70" y="19.5" width="1.5" height="6"/>
+    <rect x="817.15" y="18.0" width="1.5" height="9"/>
+    <rect x="826.60" y="19.5" width="1.5" height="6"/>
+    <text x="836.8" y="25" text-anchor="middle">14</text>
+    <rect x="845.50" y="19.5" width="1.5" height="6"/>
+    <rect x="854.95" y="18.0" width="1.5" height="9"/>
+    <rect x="864.40" y="19.5" width="1.5" height="6"/>
+    <text x="874.6" y="25" text-anchor="middle">15</text>
+    <rect x="883.30" y="19.5" width="1.5" height="6"/>
+    <rect x="892.75" y="18.0" width="1.5" height="9"/>
+    <rect x="902.20" y="19.5" width="1.5" height="6"/>
+    <text x="912.4" y="25" text-anchor="middle">16</text>
+    <rect x="921.10" y="19.5" width="1.5" height="6"/>
+    <rect x="930.55" y="18.0" width="1.5" height="9"/>
+    <rect x="940.00" y="19.5" width="1.5" height="6"/>
+    <text x="950.2" y="25" text-anchor="middle">17</text>
+    <rect x="958.90" y="19.5" width="1.5" height="6"/>
+    <rect x="968.35" y="18.0" width="1.5" height="9"/>
+    <rect x="977.80" y="19.5" width="1.5" height="6"/>
+    <text x="988.0" y="25" text-anchor="middle">18</text>
+    <rect x="996.70" y="19.5" width="1.5" height="6"/>
+    <rect x="1006.15" y="18.0" width="1.5" height="9"/>
+    <rect x="1015.60" y="19.5" width="1.5" height="6"/>
+    <text x="1025.8" y="25" text-anchor="middle">19</text>
+    <rect x="1034.50" y="19.5" width="1.5" height="6"/>
+    <rect x="1043.95" y="18.0" width="1.5" height="9"/>
+    <rect x="1053.40" y="19.5" width="1.5" height="6"/>
+    <text x="1063.6" y="25" text-anchor="middle">20</text>
+    <rect x="1072.30" y="19.5" width="1.5" height="6"/>
+    <rect x="1081.75" y="18.0" width="1.5" height="9"/>
+    <rect x="1091.20" y="19.5" width="1.5" height="6"/>
+    <text x="1101.4" y="25" text-anchor="middle">21</text>
+    <rect x="410" y="13" width="22" height="20" rx="2" class="ruler-handle"/>
+    <rect x="45" y="18.5" width="10" height="8" class="ruler-handle"/>
+    <rect x="1387" y="19.5" width="11" height="6" class="ruler-handle"/>
+  </g>
+</svg></div></div>
 
   <main>
     <!-- Rich-text editing surface: explicit textbox role + accessible name
@@ -252,9 +371,16 @@
          cannot reach the host; clears automatically on the next success. -->
     <span id="offline-indicator" class="offline-indicator" role="status" aria-live="polite" hidden data-i18n="Status.OfflineIndicator">Offline</span>
     <span class="spacer"></span>
-    <button id="btn-zoom-out" title="Zoom out" aria-label="Zoom out" aria-keyshortcuts="Control+Minus">−</button>
-    <button id="btn-zoom-reset" title="Reset zoom" aria-label="Reset zoom">100%</button>
-    <button id="btn-zoom-in" title="Zoom in" aria-label="Zoom in" aria-keyshortcuts="Control+Plus">+</button>
+    <!-- Zoom cluster at the OO-golden coordinates: − / slider / + / fit / %.
+         The slider is the live zoom control (50%..200%, matches applyZoom). -->
+    <span class="sb" style="--sb-x: 1173px">
+    <input type="range" id="zoom-slider" class="zoom-slider" min="50" max="200" step="10" value="100"
+           title="Zoom" aria-label="Zoom level">
+    </span>
+    <button class="sb" id="btn-zoom-out" style="--sb-x: 1100px" title="Zoom out" aria-label="Zoom out" aria-keyshortcuts="Control+Minus"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5M4.5 7h5"/></svg></button>
+    <button class="sb" id="btn-zoom-in" style="--sb-x: 1250px" title="Zoom in" aria-label="Zoom in" aria-keyshortcuts="Control+Plus"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5M4.5 7h5M7 4.5v5"/></svg></button>
+    <button class="sb" id="btn-zoom-fit" style="--sb-x: 1282px" title="Fit page width" aria-label="Fit page width">⤢</button>
+    <button class="sb" id="btn-zoom-reset" style="--sb-x: 1349px" title="Reset zoom" aria-label="Reset zoom">100%</button>
   </footer>
 
   <!-- Insert-table dialog (modal): rows/cols picked here, then a real

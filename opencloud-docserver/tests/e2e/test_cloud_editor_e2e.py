@@ -440,7 +440,8 @@ def test_format_color_highlight_superscript(servers):
             # Select the whole contenteditable so superscript applies visibly,
             # then check the styling spans survive.
             frame.locator("#editor").select_text()
-            frame.locator("button[data-cmd='superscript']").click()
+            # quick-access duplicate: pick the app-row one deterministically
+            frame.locator("button[data-cmd='superscript']").first.click()
 
             # The styling is visible in the DOM.
             colored = frame.locator("#editor span[style*='color']").count()
@@ -533,12 +534,14 @@ def test_insert_hr_pagebreak_symbol(servers):
 
             # Horizontal rule.
             _open_ribbon_tab(frame, "insert")
+            frame.locator(".ribbon-tab[data-tab='insert']").click()
             frame.locator("#btn-hr").click()
             frame.locator("#editor hr").wait_for(state="attached", timeout=5000)
             assert frame.locator("#editor hr").count() == 1
 
             # Page break marker.
             _open_ribbon_tab(frame, "layout")
+            frame.locator(".ribbon-tab[data-tab='layout']").click()
             frame.locator("#btn-page-break").click()
             frame.locator("#editor div.page-break").wait_for(state="attached", timeout=5000)
             assert frame.locator("#editor div.page-break").count() == 1

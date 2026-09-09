@@ -23,14 +23,16 @@ Layers exercised per feature (marker -> command -> css):
     evidence: same e2e test observes the body background colour change.
 
 NOT covered here (audit documented in features.yaml divergences instead):
-  * Fit page / fit width — no fit control exists in index.html, editor.js or
-    style.css (only unrelated `viewport-fit=cover` / `object-fit` CSS props).
-  * Rulers / guides      — no ruler or guide surface anywhere in web/ or src/;
-    nothing to pin.
+  * Fit page / fit width — #btn-zoom-fit does a simple fit-width estimate;
+    no dedicated fit-page/fit-width machinery beyond that.
+  * Rulers / guides      — index.html ships a decorative visual-parity ruler
+    (.ruler + inline SVG mm/cm scale, aria-hidden, no interaction); coverage
+    intentionally not pinned, F-ids stay absent from this file (the seeder
+    regex treats any F-### token as a coverage marker).
 
-These two features must stay unresolved-by-coverage, so their F-ids are
-INTENTIONALLY absent from this file (the seeder regex treats any F-### token
-anywhere in the file as a coverage marker).
+The theme/fullscreen buttons intentionally remain without F-id markers here:
+their coverage lives in features.yaml divergences. F-### tokens must stay out
+of this file unless a feature gains a real test.
 """
 from __future__ import annotations
 
@@ -54,9 +56,9 @@ def test_zoom_controls_surfaces_present():
         assert f'aria-keyshortcuts="{key}"' in HTML, \
             f"#{btn_id} missing aria-keyshortcuts {key}"
     assert 'id="btn-zoom-reset"' in HTML, "missing #btn-zoom-reset in index.html"
-    # reset label starts at 100% (the zoom-neutral state)
-    assert '<button id="btn-zoom-reset" title="Reset zoom" ' \
-           'aria-label="Reset zoom">100%</button>' in HTML
+    # reset label starts at 100% (the zoom-neutral state); .sb = OO-golden slot
+    assert '<button class="sb" id="btn-zoom-reset" style="--sb-x: 1349px" ' \
+           'title="Reset zoom" aria-label="Reset zoom">100%</button>' in HTML
 
 
 def test_zoom_command_applyzoom_wired():

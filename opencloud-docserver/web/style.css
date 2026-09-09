@@ -128,7 +128,6 @@ body {
   background: var(--ribbon);
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
-  overflow: visible;
 }
 
 /* Ribbon pages: one visible control group per tab (default Home). */
@@ -210,9 +209,20 @@ body {
   left: 50%;
   width: min(792px, 90%);
   transform: translateX(-50%);
-  background:
-    repeating-linear-gradient(90deg, var(--ruler-tick) 0 1px, transparent 1px 48.6px) left bottom / 100% 12px no-repeat,
-    repeating-linear-gradient(90deg, var(--ruler-tick) 0 1px, transparent 1px 9.72px) left bottom / 100% 6px no-repeat;
+  background: var(--ruler-tick);  /* flat backdrop; real scale drawn by SVG */
+  opacity: 0.35;
+}
+/* Real mm/cm scale (ticks + numbers + handles) spanning the window, so the
+   SVG user-space coordinates match the golden component map 1:1. */
+.ruler-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  font-size: 7px;
+  font-family: system-ui, sans-serif;
+}
+.ruler-svg .ruler-handle { fill: #4a4a4a; }
 }
 
 .toolbar button {
@@ -266,6 +276,94 @@ body {
 /* Font size is narrow; family and spacing get a bit more room */
 #font-size { width: 58px; max-width: 58px; }
 #font-family { width: 134px; max-width: 134px; }
+
+/* --- OO-golden slot placement (rb/qa): absolutely positioned controls ---
+   --rb-x/--qa-x is the component center; translate(-50%,-50%) centers on it. */
+.ribbon-row { position: relative; min-height: 24px; }
+.toolbar .ribbon-page.active { align-self: stretch; height: 100%; align-content: center; }
+/* single-tab pages (insert/layout/review): one centered row, no wrapping */
+.ribbon-page.active:not(.two-row) { flex-wrap: nowrap; align-items: center; }
+.ribbon-page.active:not(.two-row) button { flex: 0 0 auto; }
+.two-row .ribbon-row { flex: 1; }  /* fill the 86px band → rows at OO y80/116 */
+.toolbar .rb {
+  position: absolute;
+  left: calc(var(--rb-x) - 12px);  /* minus toolbar padding: var = OO page x */
+  top: var(--rb-y, 50%);
+  transform: translate(-50%, -50%);
+}
+.menu-bar { position: relative; }
+.menu-bar .qa {
+  position: absolute;
+  left: var(--qa-x);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0 2px;
+}
+.menu-bar .qa:hover { background: var(--hover); }
+.menu-bar .qa.save-mirror { font-size: 11px; color: var(--muted); cursor: default; }
+.menu-bar .qa.save-mirror:hover { background: transparent; }
+.menu-bar select.qa {
+  appearance: none;
+  border: none;
+  background: transparent;
+  height: 20px;
+  width: 44px;
+  font-size: 12px;
+  text-align: center;
+  text-align-last: center;  /* shown option centered → ink lands on slot */
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Borderless bare selects: ink = text only (golden shows bare text items).
+   #font-family gets a real box (the golden shows a boxed family picker). */
+.toolbar .toolbar-select.bare,
+#font-size.bare, #font-family.bare, #line-spacing.bare {
+  appearance: none;
+  border: none;
+  background: transparent;
+  width: auto;
+  max-width: none;
+  height: 20px;
+  padding: 0 2px;
+  font-size: 11px;
+}
+#font-family.bare {
+  width: 118px;
+  border: 1px solid #8a8a8a;
+  border-radius: 3px;
+  padding: 0 4px;
+  background: var(--bg);
+}
+
+/* Style gallery presets (real formatBlock/removeFormat commands) */
+.gallery-preset {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+.gallery-preset:hover { border-color: var(--accent); }
+.gp-normal { width: 108px; height: 42px; }
+.gp-normal span { font-size: 15px; }
+.gp-title { height: 20px; }
+.gp-title span { font-size: 12px; }
+.gp-h1 { width: 88px; height: 26px; }
+.gp-h1 span { font-size: 17px; font-weight: 600; }
+.gp-h2 { width: 75px; height: 22px; }
+.gp-h2 span { font-size: 15px; font-weight: 600; }
+.gp-h3 { width: 66px; height: 20px; }
+.gp-h3 span { font-size: 13px; font-weight: 600; }
 #line-spacing { width: 92px; max-width: 92px; }
 
 .toolbar .color-btn {
@@ -451,9 +549,18 @@ body {
   border-top: 1px solid var(--border);
   font-size: 12px;
   color: var(--muted);
+  position: relative;
+}
+/* Zoom cluster pinned at OO-golden coordinates (− / slider / + / fit / %) */
+.statusbar .sb {
+  position: absolute;
+  left: var(--sb-x);
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 html.light .statusbar { background: #fdfdfd; }  /* OO golden: near-white bar */
 .statusbar .spacer { flex: 1; }
+#word-count { margin-left: 12px; }
 .statusbar button {
   min-width: 24px;
   height: 22px;
@@ -466,6 +573,31 @@ html.light .statusbar { background: #fdfdfd; }  /* OO golden: near-white bar */
   cursor: pointer;
 }
 .statusbar button:hover { background: var(--hover); color: var(--text); }
+.statusbar .sb svg { display: block; }
+.statusbar .sb { color: var(--muted); }
+/* Styled range: dark end caps + thumb → reads like the OO zoom slider */
+.zoom-slider {
+  width: 92px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+.zoom-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg,
+    #6b6b6b 0 18px, #d9d9d9 18px calc(100% - 18px), #6b6b6b calc(100% - 18px));
+}
+.zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4a4a4a;
+  margin-top: -5px;
+}
 .offline-indicator {
   font-size: 12px;
   font-weight: 600;

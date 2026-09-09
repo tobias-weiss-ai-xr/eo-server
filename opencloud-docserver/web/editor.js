@@ -303,6 +303,8 @@
   function setStatus(text, isError) {
     status.textContent = text;
     status.style.color = isError ? "#f87171" : "";
+    const mirror = document.getElementById("save-mirror");
+    if (mirror) mirror.textContent = text;
   }
 
   // ------------------------------------------------------------------
@@ -2767,6 +2769,8 @@
     editor.style.zoom = String(zoomLevel);
     const reset = document.getElementById("btn-zoom-reset");
     if (reset) reset.textContent = Math.round(zoomLevel * 100) + "%";
+    const slider = document.getElementById("zoom-slider");
+    if (slider) slider.value = String(Math.round(zoomLevel * 100));
     localStorage.setItem("wo-zoom", String(zoomLevel));
   }
   function applyTheme() {
@@ -2805,11 +2809,25 @@
   const zoomInBtn = document.getElementById("btn-zoom-in");
   const zoomOutBtn = document.getElementById("btn-zoom-out");
   const zoomResetBtn = document.getElementById("btn-zoom-reset");
+  const zoomSlider = document.getElementById("zoom-slider");
+  const zoomFitBtn = document.getElementById("btn-zoom-fit");
   const themeBtn = document.getElementById("btn-theme");
   const fsBtn = document.getElementById("btn-fullscreen");
   if (zoomInBtn) zoomInBtn.addEventListener("click", () => { zoomLevel += 0.1; applyZoom(); });
   if (zoomOutBtn) zoomOutBtn.addEventListener("click", () => { zoomLevel -= 0.1; applyZoom(); });
   if (zoomResetBtn) zoomResetBtn.addEventListener("click", () => { zoomLevel = 1; applyZoom(); });
+  if (zoomSlider) {
+    zoomSlider.value = String(Math.round(zoomLevel * 100));
+    zoomSlider.addEventListener("input", () => { zoomLevel = parseInt(zoomSlider.value, 10) / 100; applyZoom(); });
+  }
+  if (zoomFitBtn) zoomFitBtn.addEventListener("click", () => {
+    // Fit page width: scale so the 794px page (plus margins) fills the viewport.
+    const avail = window.innerWidth - 96;
+    zoomLevel = Math.min(2, Math.max(0.5, avail / 830));
+    applyZoom();
+  });
+  const printBtn = document.getElementById("btn-print-qa");
+  if (printBtn) printBtn.addEventListener("click", () => window.print());
   if (themeBtn) themeBtn.addEventListener("click", toggleTheme);
   if (fsBtn) fsBtn.addEventListener("click", toggleFullscreen);
   applyZoom();
@@ -2889,6 +2907,17 @@
   if (fontFamilySel) fontFamilySel.addEventListener("change", () => {
     if (READ_ONLY || !fontFamilySel.value) return;
     emitCommand("fontName", fontFamilySel.value);
+  });
+  // Quick-access duplicates in the app row: same commands, mirrored state.
+  const fontSizeQa = document.getElementById("font-size-qa");
+  if (fontSizeQa) fontSizeQa.addEventListener("change", () => {
+    if (READ_ONLY || !fontSizeQa.value) return;
+    emitCommand("fontSize", fontSizeQa.value);
+  });
+  const fontFamilyQa = document.getElementById("font-family-qa");
+  if (fontFamilyQa) fontFamilyQa.addEventListener("change", () => {
+    if (READ_ONLY || !fontFamilyQa.value) return;
+    emitCommand("fontName", fontFamilyQa.value);
   });
   const textColor = document.getElementById("text-color");
   if (textColor) textColor.addEventListener("change", () => {
