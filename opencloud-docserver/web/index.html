@@ -92,6 +92,10 @@
     <button type="button" class="ribbon-tab" data-tab="layout" role="tab" aria-selected="false" data-i18n="Tab.Layout">Layout</button>
     <button type="button" class="ribbon-tab" data-tab="review" role="tab" aria-selected="false" data-i18n="Tab.Review">Review</button>
     <span class="spacer"></span>
+    <!-- Window control at the OO-golden titlebar corner: duplicates the
+         ribbon fullscreen toggle (same pattern as the statusbar comment
+         shortcuts). -->
+    <button type="button" class="titlebar-fs" title="Fullscreen" aria-label="Fullscreen"><svg viewBox="0 0 8 8" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1 3V1h2M7 5v2H5M1 5v2h2M7 3V1H5"/></svg></button>
   </div>
   <nav id="menu-bar" class="menu-bar" aria-label="Application menu" data-i18n-aria-label="MenuBar.Region">
     <div class="menu">
@@ -166,6 +170,17 @@
       <option value="Times New Roman">Times New Roman</option>
       <option value="Verdana">Verdana</option>
     </select>
+    <span class="menu rb-menu" style="--rb-x: 215px">
+      <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="More font families">▾</button>
+      <ul class="menu-list" role="menu" hidden>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontName" data-value="" data-i18n="Toolbar.DefaultFont">Default</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontName" data-value="Arial">Arial</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontName" data-value="Courier New">Courier New</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontName" data-value="Georgia">Georgia</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontName" data-value="Times New Roman">Times New Roman</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontName" data-value="Verdana">Verdana</button></li>
+      </ul>
+    </span>
     <select id="font-size" class="toolbar-select rb bare" style="--rb-x: 239px" title="Font size" data-i18n-title="Toolbar.FontSizeTitle" aria-label="Font size">
       <option value="1">8</option>
       <option value="2">10</option>
@@ -175,13 +190,39 @@
       <option value="6">24</option>
       <option value="7">36</option>
     </select>
+    <span class="menu rb-menu" style="--rb-x: 264px">
+      <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="More font sizes">▾</button>
+      <ul class="menu-list" role="menu" hidden>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontSize" data-value="1">8</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontSize" data-value="2">10</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontSize" data-value="3">12</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontSize" data-value="4">14</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontSize" data-value="5">18</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontSize" data-value="6">24</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="fontSize" data-value="7">36</button></li>
+      </ul>
+    </span>
     <button class="rb" data-cmd="bold" style="--rb-x: 289px" title="Bold (Ctrl+B)" data-i18n-title="Toolbar.BoldTitle" aria-label="Bold" data-i18n-aria-label="Toolbar.Bold" aria-pressed="false" aria-keyshortcuts="Control+B"><b>B</b></button>
     <button class="rb" data-cmd="italic" style="--rb-x: 318px" title="Italic (Ctrl+I)" data-i18n-title="Toolbar.ItalicTitle" aria-label="Italic" data-i18n-aria-label="Toolbar.Italic" aria-pressed="false" aria-keyshortcuts="Control+I"><i>I</i></button>
     <button class="rb" data-cmd="underline" style="--rb-x: 347px" title="Underline (Ctrl+U)" data-i18n-title="Toolbar.UnderlineTitle" aria-label="Underline" data-i18n-aria-label="Toolbar.Underline" aria-pressed="false" aria-keyshortcuts="Control+U"><u>U</u></button>
     <button class="rb" data-cmd="strikeThrough" style="--rb-x: 408px" title="Strikethrough" data-i18n-title="Toolbar.StrikethroughTitle" aria-label="Strikethrough" data-i18n-aria-label="Toolbar.Strikethrough" aria-pressed="false"><s>S</s></button>
     <button class="rb" data-cmd="smallCaps" style="--rb-x: 448px" title="Small caps" data-i18n-title="Toolbar.SmallCapsTitle" aria-label="Small caps" data-i18n-aria-label="Toolbar.SmallCaps" aria-pressed="false">SC</button>
-    <button class="rb" data-cmd="superscript" style="--rb-x: 481px" title="Superscript" data-i18n-title="Toolbar.SuperscriptTitle" aria-label="Superscript" data-i18n-aria-label="Toolbar.Superscript" aria-pressed="false"><sup>x&sup2;</sup></button>
-    <button class="rb" data-cmd="subscript" style="--rb-x: 497px" title="Subscript" data-i18n-title="Toolbar.SubscriptTitle" aria-label="Subscript" data-i18n-aria-label="Toolbar.Subscript" aria-pressed="false"><sub>x₂</sub></button>
+    <span class="menu rb-menu" style="--rb-x: 468px">
+      <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="Case options">▾</button>
+      <ul class="menu-list" role="menu" hidden>
+        <li role="none"><button type="button" role="menuitem" data-cmd="smallCaps" data-i18n="Toolbar.SmallCaps">Small caps</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="allCaps" data-i18n="Toolbar.AllCaps">All caps</button></li>
+      </ul>
+    </span>
+    <!-- OO-golden sup/sub: one stacked split-button (two ink lines) + case/direction carets -->
+    <button class="rb ss-stack" data-cmd="superscript" style="--rb-x: 488px" title="Superscript / Subscript" data-i18n-title="Toolbar.SuperscriptTitle" aria-label="Superscript" data-i18n-aria-label="Toolbar.Superscript" aria-pressed="false"><span aria-hidden="true">x&sup2;</span><span aria-hidden="true">x₂</span></button>
+    <span class="menu rb-menu" style="--rb-x: 508px">
+      <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="Script options">▾</button>
+      <ul class="menu-list" role="menu" hidden>
+        <li role="none"><button type="button" role="menuitem" data-cmd="superscript" data-i18n="Toolbar.Superscript">Superscript</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="subscript" data-i18n="Toolbar.Subscript">Subscript</button></li>
+      </ul>
+    </span>
     <label class="color-btn rb" style="--rb-x: 528px" title="Text color" data-i18n-title="Toolbar.TextColorTitle">
       <span class="color-key" aria-hidden="true">A</span>
       <input type="color" id="text-color" value="#333333" aria-label="Text color">
@@ -193,6 +234,12 @@
     <button class="rb" data-cmd="code" style="--rb-x: 609px" title="Inline code" data-i18n-title="Toolbar.CodeTitle" aria-label="Inline code" data-i18n-aria-label="Toolbar.Code" aria-pressed="false">&lt;/&gt;</button>
     <button class="rb" data-cmd="directionRtl" style="--rb-x: 649px" title="Right-to-left paragraph" data-i18n-title="Toolbar.DirectionRtlTitle" aria-label="Right-to-left" data-i18n-aria-label="Toolbar.DirectionRtl" aria-pressed="false">RTL</button>
         <button class="rb" data-cmd="allCaps" style="--rb-x: 589px" title="All caps" data-i18n-title="Toolbar.AllCapsTitle" aria-label="All caps" data-i18n-aria-label="Toolbar.AllCaps" aria-pressed="false">AA</button>
+    <span class="menu rb-menu" style="--rb-x: 668px">
+      <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="Paragraph direction options">▾</button>
+      <ul class="menu-list" role="menu" hidden>
+        <li role="none"><button type="button" role="menuitem" data-cmd="directionRtl" data-i18n="Toolbar.ToggleDirection">Toggle paragraph direction</button></li>
+      </ul>
+    </span>
     <button id="btn-find" class="rb" style="--rb-x: 689px" title="Find and replace (Ctrl+F)" data-i18n-title="Toolbar.FindTitle" aria-label="Find and replace" data-i18n-aria-label="Toolbar.Find" aria-keyshortcuts="Control+F">⌕</button>
     <button id="btn-theme" class="rb" style="--rb-x: 1392px" title="Toggle dark/light theme" aria-label="Toggle theme" aria-pressed="false">☾</button>
     <!-- Style gallery: boxed formatBlock/removeFormat presets (row1 lower
@@ -266,86 +313,86 @@
   <g fill="#6b6b6b">
     <rect x="325.75" y="18.0" width="1.5" height="9"/>
     <rect x="335.20" y="19.5" width="1.5" height="6"/>
-    <text x="345.4" y="25" text-anchor="middle">1</text>
+    <text x="345.4" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">1</text>
     <rect x="354.10" y="19.5" width="1.5" height="6"/>
     <rect x="363.55" y="18.0" width="1.5" height="9"/>
     <rect x="373.00" y="19.5" width="1.5" height="6"/>
-    <text x="383.2" y="25" text-anchor="middle">2</text>
+    <text x="383.2" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">2</text>
     <rect x="391.90" y="19.5" width="1.5" height="6"/>
     <rect x="401.35" y="18.0" width="1.5" height="9"/>
     <rect x="410.80" y="19.5" width="1.5" height="6"/>
     <rect x="429.70" y="19.5" width="1.5" height="6"/>
     <rect x="439.15" y="18.0" width="1.5" height="9"/>
     <rect x="448.60" y="19.5" width="1.5" height="6"/>
-    <text x="458.8" y="25" text-anchor="middle">4</text>
+    <text x="458.8" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">4</text>
     <rect x="467.50" y="19.5" width="1.5" height="6"/>
     <rect x="476.95" y="18.0" width="1.5" height="9"/>
     <rect x="486.40" y="19.5" width="1.5" height="6"/>
-    <text x="496.6" y="25" text-anchor="middle">5</text>
+    <text x="496.6" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">5</text>
     <rect x="505.30" y="19.5" width="1.5" height="6"/>
     <rect x="514.75" y="18.0" width="1.5" height="9"/>
     <rect x="524.20" y="19.5" width="1.5" height="6"/>
-    <text x="534.4" y="25" text-anchor="middle">6</text>
+    <text x="534.4" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">6</text>
     <rect x="543.10" y="19.5" width="1.5" height="6"/>
     <rect x="552.55" y="18.0" width="1.5" height="9"/>
     <rect x="562.00" y="19.5" width="1.5" height="6"/>
-    <text x="572.2" y="25" text-anchor="middle">7</text>
+    <text x="572.2" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">7</text>
     <rect x="580.90" y="19.5" width="1.5" height="6"/>
     <rect x="590.35" y="18.0" width="1.5" height="9"/>
     <rect x="599.80" y="19.5" width="1.5" height="6"/>
-    <text x="610.0" y="25" text-anchor="middle">8</text>
+    <text x="610.0" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">8</text>
     <rect x="618.70" y="19.5" width="1.5" height="6"/>
     <rect x="628.15" y="18.0" width="1.5" height="9"/>
     <rect x="637.60" y="19.5" width="1.5" height="6"/>
-    <text x="647.8" y="25" text-anchor="middle">9</text>
+    <text x="647.8" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">9</text>
     <rect x="656.50" y="19.5" width="1.5" height="6"/>
     <rect x="665.95" y="18.0" width="1.5" height="9"/>
     <rect x="675.40" y="19.5" width="1.5" height="6"/>
-    <text x="685.6" y="25" text-anchor="middle">10</text>
+    <text x="685.6" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">10</text>
     <rect x="694.30" y="19.5" width="1.5" height="6"/>
     <rect x="703.75" y="18.0" width="1.5" height="9"/>
     <rect x="713.20" y="19.5" width="1.5" height="6"/>
-    <text x="723.4" y="25" text-anchor="middle">11</text>
+    <text x="723.4" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">11</text>
     <rect x="732.10" y="19.5" width="1.5" height="6"/>
     <rect x="741.55" y="18.0" width="1.5" height="9"/>
     <rect x="751.00" y="19.5" width="1.5" height="6"/>
-    <text x="761.2" y="25" text-anchor="middle">12</text>
+    <text x="761.2" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">12</text>
     <rect x="769.90" y="19.5" width="1.5" height="6"/>
     <rect x="779.35" y="18.0" width="1.5" height="9"/>
     <rect x="788.80" y="19.5" width="1.5" height="6"/>
-    <text x="799.0" y="25" text-anchor="middle">13</text>
+    <text x="799.0" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">13</text>
     <rect x="807.70" y="19.5" width="1.5" height="6"/>
     <rect x="817.15" y="18.0" width="1.5" height="9"/>
     <rect x="826.60" y="19.5" width="1.5" height="6"/>
-    <text x="836.8" y="25" text-anchor="middle">14</text>
+    <text x="836.8" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">14</text>
     <rect x="845.50" y="19.5" width="1.5" height="6"/>
     <rect x="854.95" y="18.0" width="1.5" height="9"/>
     <rect x="864.40" y="19.5" width="1.5" height="6"/>
-    <text x="874.6" y="25" text-anchor="middle">15</text>
+    <text x="874.6" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">15</text>
     <rect x="883.30" y="19.5" width="1.5" height="6"/>
     <rect x="892.75" y="18.0" width="1.5" height="9"/>
     <rect x="902.20" y="19.5" width="1.5" height="6"/>
-    <text x="912.4" y="25" text-anchor="middle">16</text>
+    <text x="912.4" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">16</text>
     <rect x="921.10" y="19.5" width="1.5" height="6"/>
     <rect x="930.55" y="18.0" width="1.5" height="9"/>
     <rect x="940.00" y="19.5" width="1.5" height="6"/>
-    <text x="950.2" y="25" text-anchor="middle">17</text>
+    <text x="950.2" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">17</text>
     <rect x="958.90" y="19.5" width="1.5" height="6"/>
     <rect x="968.35" y="18.0" width="1.5" height="9"/>
     <rect x="977.80" y="19.5" width="1.5" height="6"/>
-    <text x="988.0" y="25" text-anchor="middle">18</text>
+    <text x="988.0" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">18</text>
     <rect x="996.70" y="19.5" width="1.5" height="6"/>
     <rect x="1006.15" y="18.0" width="1.5" height="9"/>
     <rect x="1015.60" y="19.5" width="1.5" height="6"/>
-    <text x="1025.8" y="25" text-anchor="middle">19</text>
+    <text x="1025.8" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">19</text>
     <rect x="1034.50" y="19.5" width="1.5" height="6"/>
     <rect x="1043.95" y="18.0" width="1.5" height="9"/>
     <rect x="1053.40" y="19.5" width="1.5" height="6"/>
-    <text x="1063.6" y="25" text-anchor="middle">20</text>
+    <text x="1063.6" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">20</text>
     <rect x="1072.30" y="19.5" width="1.5" height="6"/>
     <rect x="1081.75" y="18.0" width="1.5" height="9"/>
     <rect x="1091.20" y="19.5" width="1.5" height="6"/>
-    <text x="1101.4" y="25" text-anchor="middle">21</text>
+    <text x="1101.4" y="25" textLength="5" lengthAdjust="spacingAndGlyphs" text-anchor="middle">21</text>
     <rect x="410" y="13" width="22" height="20" rx="2" class="ruler-handle"/>
     <rect x="45" y="18.5" width="10" height="8" class="ruler-handle"/>
     <rect x="1387" y="19.5" width="11" height="6" class="ruler-handle"/>
@@ -381,6 +428,16 @@
     <button class="sb" id="btn-zoom-in" style="--sb-x: 1250px" title="Zoom in" aria-label="Zoom in" aria-keyshortcuts="Control+Plus"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5M4.5 7h5M7 4.5v5"/></svg></button>
     <button class="sb" id="btn-zoom-fit" style="--sb-x: 1282px" title="Fit page width" aria-label="Fit page width">⤢</button>
     <button class="sb" id="btn-zoom-reset" style="--sb-x: 1349px" title="Reset zoom" aria-label="Reset zoom">100%</button>
+    <!-- Document language (drives spellcheck + lang attr) and comment
+         shortcuts at the OO-golden right-end slots. -->
+    <select id="doc-lang" class="sb" style="--sb-x: 987px" title="Document language" aria-label="Document language">
+      <option value="en-US" selected>English (US)</option>
+      <option value="en-GB">English (UK)</option>
+      <option value="de-DE">Deutsch</option>
+    </select>
+    <button class="sb menu-trigger caret-btn" id="doc-lang-caret" style="--sb-x: 1080px" title="Language options" aria-label="Language options">▾</button>
+    <button class="sb sb-comments" style="--sb-x: 1383px" title="Toggle comments panel" aria-label="Toggle comments panel"><svg viewBox="0 0 18 14" width="18" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2h14v8h-7.5L5 13v-3H2z"/></svg></button>
+    <button class="sb sb-add-comment" style="--sb-x: 1417px" title="Add comment" aria-label="Add comment" aria-keyshortcuts="Control+Alt+M"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button>
   </footer>
 
   <!-- Insert-table dialog (modal): rows/cols picked here, then a real

@@ -701,7 +701,7 @@ def test_inline_format_commands_code_caps_strike(servers):
               const sel = window.getSelection();
               sel.removeAllRanges(); sel.addRange(range);
             }""")
-            frame.locator("button[data-cmd='allCaps']").click()
+            frame.locator("button.rb[data-cmd='allCaps']").click()
             frame.locator("#editor").evaluate("""() => {
               const ed = document.getElementById('editor');
               const t = ed.querySelector('p:last-of-type');
@@ -752,7 +752,7 @@ def test_paragraph_rtl_and_line_spacing_roundtrip(servers):
 
             # Apply 1.5 line spacing via the dropdown then RTL on the same block.
             frame.select_option("#line-spacing", "1.5")
-            frame.locator("button[data-cmd='directionRtl']").click()
+            frame.locator("button.rb[data-cmd='directionRtl']").click()
 
             html = frame.evaluate("document.getElementById('editor').innerHTML")
             assert 'line-height: 1.5' in html, html

@@ -2718,6 +2718,22 @@
   });
   const commentsClose = document.getElementById("btn-comments-close");
   if (commentsClose) commentsClose.addEventListener("click", closeCommentsPanel);
+  // Statusbar comment shortcuts: reuse the review-tab handlers.
+  const sbComments = document.querySelector(".sb-comments");
+  if (sbComments && commentsBtn) sbComments.addEventListener("click", () => commentsBtn.click());
+  const sbAddComment = document.querySelector(".sb-add-comment");
+  if (sbAddComment && commentBtn) sbAddComment.addEventListener("click", () => commentBtn.click());
+  // Document language: drives spellcheck + the editor lang attribute.
+  const docLang = document.getElementById("doc-lang");
+  if (docLang) docLang.addEventListener("change", () => {
+    const ed = document.getElementById("editor");
+    if (ed) ed.setAttribute("lang", docLang.value);
+  });
+  // The statusbar caret discloses the language select (appearance:none).
+  const docLangCaret = document.getElementById("doc-lang-caret");
+  if (docLangCaret && docLang) docLangCaret.addEventListener("click", () => {
+    try { docLang.showPicker(); } catch (err) { docLang.focus(); }
+  });
   const SYMBOLS = ["§", "¶", "°", "±", "×", "÷", "≈", "≠", "≤", "≥", "∞", "√",
                    "€", "£", "¥", "¢", "©", "®", "™", "→", "←", "↑", "↓", "•",
                    "–", "—", "…", "«", "»", "½", "¼", "¾", "α", "β", "μ", "π",
@@ -2830,6 +2846,8 @@
   if (printBtn) printBtn.addEventListener("click", () => window.print());
   if (themeBtn) themeBtn.addEventListener("click", toggleTheme);
   if (fsBtn) fsBtn.addEventListener("click", toggleFullscreen);
+  const fsTitlebar = document.querySelector(".titlebar-fs");
+  if (fsTitlebar) fsTitlebar.addEventListener("click", toggleFullscreen);
   applyZoom();
   applyTheme();
 
@@ -2847,9 +2865,30 @@
     if (trigger) trigger.setAttribute("aria-expanded", String(open));
   }
   function closeAllMenus() {
-    setMenu(fileMenu, fileTrigger, false);
-    setMenu(exportSub, exportTrigger, false);
+    // Closes every dropdown (File menu, export sublist, ribbon caret menus).
+    document.querySelectorAll(".menu-list").forEach((m) => { m.hidden = true; });
+    document.querySelectorAll("[aria-haspopup='true']").forEach((t) => t.setAttribute("aria-expanded", "false"));
   }
+
+  // Generic ribbon caret menus: trigger discloses, items dispatch commands
+  // through the same runCommand pipeline as the toolbar buttons.
+  document.querySelectorAll(".rb-menu").forEach((holder) => {
+    const trig = holder.querySelector(".menu-trigger");
+    const list = holder.querySelector(".menu-list");
+    if (!trig || !list) return;
+    trig.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const willOpen = list.hidden;
+      closeAllMenus();
+      if (willOpen) setMenu(list, trig, true);
+    });
+    list.querySelectorAll("button[data-cmd]").forEach((item) => {
+      item.addEventListener("click", () => {
+        closeAllMenus();
+        runCommand(item.dataset.cmd, item.dataset.value || null);
+      });
+    });
+  });
 
   if (fileTrigger && fileMenu) {
     // Toggle the File menu; stopPropagation so the document click handler
