@@ -162,6 +162,9 @@ def _parse_launch(request: Request, form: dict | None):
                     base_name = file_info.get("BaseFileName") or ""
                     if base_name:
                         session.name = base_name
+                    # WOPI-canonical identity for the titlebar user chip.
+                    if file_info.get("UserFriendlyName"):
+                        session.user_name = file_info["UserFriendlyName"]
                 except Exception as exc:
                     print(f"[launch] CFI failed for {doc_id}: {exc!r}")
                 # Unknown owner still gets an owner-named token (wo:unknown:…)
@@ -237,6 +240,7 @@ async def editor_page(doc_id: str, request: Request) -> HTMLResponse:
             "name": _doc_name(request, doc_id),
             "read_only": read_only,
             "session_id": session_id,
+            "user_name": (session.user_name if session else "") or "",
         },
     )
 

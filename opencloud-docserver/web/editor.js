@@ -303,8 +303,6 @@
   function setStatus(text, isError) {
     status.textContent = text;
     status.style.color = isError ? "#f87171" : "";
-    const mirror = document.getElementById("save-mirror");
-    if (mirror) mirror.textContent = text;
   }
 
   // ------------------------------------------------------------------
@@ -2864,6 +2862,25 @@
     rcBtn.setAttribute("aria-expanded", String(!hide));
   });
   if (themeBtn) themeBtn.addEventListener("click", toggleTheme);
+  // --- user identity chip (WOPI UserFriendlyName from CheckFileInfo) ---
+  const chip = document.getElementById("user-chip");
+  const uname = (window.__USER__ || "").trim();
+  if (chip && uname) {
+    chip.hidden = false;
+    document.getElementById("user-chip-name").textContent = uname.split(/\s+/)[0];
+    document.getElementById("user-chip-full").textContent = uname;
+    document.getElementById("user-chip-doc").textContent = window.__DOC_NAME__ || "";
+    const chipBtn = document.getElementById("user-chip-btn");
+    const chipPanel = document.getElementById("user-chip-panel");
+    chipBtn.title = uname;
+    chipBtn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const willOpen = chipPanel.hidden;
+      closeAllMenus();
+      chipPanel.hidden = !willOpen;
+      chipBtn.setAttribute("aria-expanded", String(willOpen));
+    });
+  }
   if (fsBtn) fsBtn.addEventListener("click", toggleFullscreen);
   const fsTitlebar = document.querySelector(".titlebar-fs");
   if (fsTitlebar) fsTitlebar.addEventListener("click", toggleFullscreen);
@@ -2887,6 +2904,8 @@
     // Closes every dropdown (File menu, export sublist, ribbon caret menus).
     document.querySelectorAll(".menu-list").forEach((m) => { m.hidden = true; });
     document.querySelectorAll("[aria-haspopup='true']").forEach((t) => t.setAttribute("aria-expanded", "false"));
+    const ucp = document.getElementById("user-chip-panel");
+    if (ucp) ucp.hidden = true;
   }
 
   // Generic ribbon caret menus: trigger discloses, items dispatch commands

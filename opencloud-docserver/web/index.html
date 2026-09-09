@@ -147,7 +147,18 @@
     <button class="qa" data-cmd="formatBlock" data-value="H2" style="--qa-x: 655px" title="Heading 2" aria-label="Heading 2" aria-pressed="false">H2</button>
     <button class="qa" data-cmd="formatBlock" data-value="H3" style="--qa-x: 706px" title="Heading 3" aria-label="Heading 3" aria-pressed="false">H3</button>
     <button class="qa" id="btn-print-qa" style="--qa-x: 1303px" title="Print" data-i18n-title="Menu.Print" aria-label="Print"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6V2.5h7V6M4.5 12.5h-2a1 1 0 0 1-1-1V7.5a1.5 1.5 0 0 1 1.5-1.5h9a1.5 1.5 0 0 1 1.5 1.5v4a1 1 0 0 1-1 1h-2M4.5 10h7v4h-7z"/></svg></button>
-    <span class="qa save-mirror" id="save-mirror" style="--qa-x: 1336px" role="status" aria-live="polite"></span>
+    <div class="menu user-chip" id="user-chip" style="--qa-x: 1350px" hidden>
+      <button type="button" id="user-chip-btn" class="user-chip-btn" aria-haspopup="true" aria-expanded="false">
+        <span id="user-chip-name"></span>
+        <svg viewBox="0 0 10 6" width="10" height="6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 1.25 5 4.75 9 1.25"/></svg>
+      </button>
+      <div class="user-chip-panel" id="user-chip-panel" hidden>
+        <span class="user-chip-label" data-i18n="User.EditingAs">Editing as</span>
+        <span class="user-chip-full" id="user-chip-full"></span>
+        <span class="user-chip-label" data-i18n="User.Document">Document</span>
+        <span class="user-chip-full" id="user-chip-doc"></span>
+      </div>
+    </div>
     <span class="spacer"></span>
     <button id="btn-save" class="primary" title="Save (Ctrl+S)" data-i18n="Toolbar.Save" data-i18n-title="Toolbar.SaveTitle" aria-label="Save" data-i18n-aria-label="Toolbar.Save" aria-keyshortcuts="Control+S">Save</button>
   </nav>
@@ -733,6 +744,7 @@
     window.__DOC_NAME__ = {{ name | tojson }};
     window.__READ_ONLY__ = {{ read_only | tojson }};
     window.__SESSION__ = {{ session_id | tojson }};
+    window.__USER__ = {{ user_name | tojson }};
   </script>
   <script src="/static/i18n.js"></script>
   <script src="/static/editor.js"></script>
