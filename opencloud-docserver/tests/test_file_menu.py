@@ -197,3 +197,20 @@ def test_view_tab_real_controls_wired():
         assert f'id="{el}"' in HTML
         assert f'"{el}"' in JS, f"{el} not wired in editor.js"
     assert '.querySelector(".ruler")' in JS
+
+
+def test_header_footer_contextual_tab():
+    """OO parity: double-clicking the page header/footer reveals a contextual
+    Header & Footer tab; it stays hidden until then. Close button + real
+    page-number/date commands + documented stubs for OO's options."""
+    import re
+    m = re.search(r'<button[^>]*data-tab="header-footer"[^>]*>', HTML)
+    assert m and " hidden" in m.group(0), "H&F tab must exist and be hidden by default"
+    page = HTML.split('class="ribbon-page" data-tab="header-footer"')[1].split("</div>")[0]
+    for el in ("btn-hf-close", "btn-hf-pagenumber", "btn-hf-datetime"):
+        assert f'id="{el}"' in page, f"{el} must be on the H&F tab"
+    for stub in ("hf.different-first", "hf.odd-even", "hf.header-from-top", "hf.footer-from-bottom"):
+        assert f'data-stub="{stub}"' in page
+    for anchor in ("enterHFMode", "exitHFMode", '"btn-hf-close"', 'dblclick', '.page-header'):
+        assert anchor in JS, f"H&F wiring missing: {anchor}"
+    assert '"Tab.HeaderFooter"' in I18N and '"HF.Close"' in I18N

@@ -2953,6 +2953,43 @@
     });
   });
 
+  // --- contextual Header & Footer tab (OO parity) ---------------------
+  // Double-clicking the page header/footer reveals the contextual tab at
+  // OO's strip position; closing it (button, another tab, Escape, or a
+  // double-click in the body) hides it again.
+  let hfMode = false;
+  const hfTab = document.querySelector('.ribbon-tab[data-tab="header-footer"]');
+  function exitHFMode() {
+    if (!hfMode || !hfTab) return;
+    hfMode = false;
+    hfTab.hidden = true;
+    document.querySelector('.ribbon-tab[data-tab="home"]')?.click();
+  }
+  function enterHFMode() {
+    if (!hfTab) return;
+    hfMode = true;
+    hfTab.hidden = false;
+    hfTab.click();
+  }
+  document.getElementById("editor")?.addEventListener("dblclick", (ev) => {
+    const inHF = ev.target.closest && ev.target.closest(".page-header, .page-footer");
+    if (inHF) enterHFMode();
+    else if (hfMode) exitHFMode();
+  });
+  document.querySelectorAll(".ribbon-tab").forEach((tab) => {
+    if (tab === hfTab) return;
+    tab.addEventListener("click", () => { if (hfMode) { hfMode = false; hfTab.hidden = true; } });
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && hfMode) { ev.preventDefault(); exitHFMode(); }
+  });
+  const hfClose = document.getElementById("btn-hf-close");
+  if (hfClose) hfClose.addEventListener("click", exitHFMode);
+  const hfPageNumber = document.getElementById("btn-hf-pagenumber");
+  if (hfPageNumber) hfPageNumber.addEventListener("click", () => emitCommand("insertPageNumber"));
+  const hfDateTime = document.getElementById("btn-hf-datetime");
+  if (hfDateTime) hfDateTime.addEventListener("click", () => emitCommand("insertDate"));
+
   // --- right-click context menu on the editing surface ----------------
   // OO parity: same geometry (210px, 26px rows) and item order as OO's
   // document context menu, restricted to the honest subset of actions WO
@@ -3437,6 +3474,10 @@
     setStatus(t("Status.Unsaved"));
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveDocument, 30000);
+    // Structural edits (insertHeader/Footer, notes) mutate the DOM without
+    // an input event, so this — not the input handler — is the single
+    // place that arms the collab poll's active-typist guard.
+    lastLocalEdit = Date.now();
   }
   editor.addEventListener("input", () => {
     // Replace-all runs a batch of execCommand edits; the whole batch is
@@ -3453,7 +3494,6 @@
     // a replace re-searches right after, a plain edit just resets the
     // counter until the user searches again.
     invalidateFindState();
-    lastLocalEdit = Date.now();
     scheduleCollabSync();
     notifyHost("editing");
     updateCounts();
@@ -3677,9 +3717,12 @@
     // untouched and converge on the next tick after the dialog closes.
     if (getOpenDialog()) return;
     // Never clobber a user who is actively typing. Once they go idle (even if
-    // the editor stays focused) remote edits converge automatically.
+    // the editor stays focused) remote edits converge automatically. Focus
+    // inside a child (e.g. an inserted page header/footer) counts too —
+    // otherwise the 0-300ms window before our own collabSync lands would let
+    // the poll flatten the just-inserted structural element into plain text.
     const activelyTyping =
-      document.activeElement === editor && Date.now() - lastLocalEdit < 1500;
+      editor.contains(document.activeElement) && Date.now() - lastLocalEdit < 1500;
     if (activelyTyping) {
       pendingRemoteText = text;
       showSyncPill();

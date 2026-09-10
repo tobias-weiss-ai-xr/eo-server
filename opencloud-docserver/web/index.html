@@ -167,6 +167,7 @@
     <button type="button" class="ribbon-tab" data-tab="view" role="tab" aria-selected="false" style="--qa-x: 594px" data-i18n="Tab.View">View</button>
     <button type="button" class="ribbon-tab" data-tab="plugins" role="tab" aria-selected="false" style="--qa-x: 654px" data-i18n="Tab.Plugins">Plugins</button>
     <button type="button" class="ribbon-tab" data-tab="ai" role="tab" aria-selected="false" style="--qa-x: 705px" data-i18n="Tab.AI">AI</button>
+    <button type="button" class="ribbon-tab" data-tab="header-footer" role="tab" aria-selected="false" style="--qa-x: 747px" data-i18n="Tab.HeaderFooter" hidden>Header &amp; Footer</button>
     <!-- Quick-format cluster (OO-golden positions): text-labeled command
          duplicates of the ribbon controls — same data-cmd pipeline. -->
     <button class="qa" data-cmd="underline" style="--qa-x: 436px" title="Underline (Ctrl+U)" data-i18n="Toolbar.Underline" aria-label="Underline" aria-pressed="false">Underline</button>
@@ -462,6 +463,15 @@
     <button type="button" data-stub="ai.summarize" data-i18n="AI.Summarize">Summarize</button>
     <button type="button" data-stub="ai.translate" data-i18n="AI.Translate">Translate</button>
     <button type="button" data-stub="ai.rewrite" data-i18n="AI.Rewrite">Rewrite</button>
+    </div>
+    <div class="ribbon-page" data-tab="header-footer" role="group" aria-label="Header and Footer ribbon" data-i18n-aria-label="Tab.HeaderFooter">
+    <button id="btn-hf-close" type="button" data-i18n="HF.Close">Close Header &amp; Footer</button>
+    <button id="btn-hf-pagenumber" type="button" data-i18n="HF.PageNumber">Page number</button>
+    <button id="btn-hf-datetime" type="button" data-i18n="HF.DateTime">Date &amp; time</button>
+    <button type="button" data-stub="hf.different-first" data-i18n="HF.DifferentFirst">Different First Page</button>
+    <button type="button" data-stub="hf.odd-even" data-i18n="HF.OddEven">Different Odd &amp; Even</button>
+    <button type="button" data-stub="hf.header-from-top" data-i18n="HF.HeaderFromTop">Header from Top</button>
+    <button type="button" data-stub="hf.footer-from-bottom" data-i18n="HF.FooterFromBottom">Footer from Bottom</button>
     </div>
   </header>
 
