@@ -74,11 +74,14 @@ from odf.text import (
 
 from src.editor.converter import (
     _MONO_FONTS,
+    _PAGE_SETUP_RE,
     _inline_to_text,
     _inline_tokens,
     _normalize_color,
+    _page_setup_marker,
     _parse_border,
     _tokenize_body,
+    _twips_attr,
 )
 
 _BOLD_WEIGHTS = {"bold", "bolder", "600", "700", "800", "900"}
@@ -701,7 +704,7 @@ def _odt_to_html(data: bytes) -> str:
     flush_list()
 
     # Build the final HTML with header/footer
-    html_parts = []
+    html_parts = [_page_setup_marker_from_odt(doc)]
     if header_html:
         html_parts.append(f'<header class="page-header">{header_html}</header>')
     html_parts.extend(parts)
@@ -709,6 +712,119 @@ def _odt_to_html(data: bytes) -> str:
         html_parts.append(f'<footer class="page-footer">{footer_html}</footer>')
 
     return "\n".join(p for p in html_parts if p)
+
+
+def _odt_len_to_twips(value) -> int | None:
+    """ODF length string (e.g. '21cm', '0.98in', '297mm', '567pt') -> twips.
+    Bare numbers are interpreted as 1/100 mm per the ODF length default."""
+    import re as _re
+    if value is None:
+        return None
+    m = _re.match(r'\s*(-?[\d.]+)\s*(cm|mm|in|pt|pc)?\s*$', str(value))
+    if not m:
+        return None
+    v = float(m.group(1))
+    unit = m.group(2) or ""
+    tw = {"cm": v * 566.929, "mm": v * 56.6929, "in": v * 1440.0,
+          "pt": v * 20.0, "pc": v * 240.0, "": v / 10.0}.get(unit)
+    return int(round(tw)) if tw is not None else None
+
+
+def _odt_twips_to_len(tw: int) -> str:
+    return f"{tw / 566.929:.3f}cm"
+
+
+def _page_setup_marker_from_odt(doc) -> str:
+    """Marker for the master page's page layout ('' when unknown)."""
+    from odf.style import PageLayout, PageLayoutProperties
+    try:
+        layout_name = None
+        for root in (doc.styles, doc.masterstyles, doc.automaticstyles):
+            for child in root.childNodes:
+                if getattr(child, "qname", ("", ""))[1] == "master-page":
+                    layout_name = child.getAttribute("pagelayoutname") or layout_name
+        if not layout_name:
+            return ""
+        props = None
+        for root in (doc.automaticstyles, doc.styles):
+            for child in root.childNodes:
+                if (getattr(child, "qname", ("", ""))[1] == "page-layout"
+                        and child.getAttribute("name") == layout_name):
+                    found = child.getElementsByType(PageLayoutProperties)
+                    if found:
+                        props = found[0]
+                        break
+            if props is not None:
+                break
+        if props is None:
+            return ""
+        g = props.getAttribute
+        orient = "landscape" if (g("printorientation") or "").lower() == "landscape" else "portrait"
+        tw = lambda v: _odt_len_to_twips(v)
+        w, h = tw(g("pagewidth")), tw(g("pageheight"))
+        if orient == "portrait" and w and h and w > h:
+            w, h = h, w
+        marker = _page_setup_marker(
+            w, h, orient,
+            tw(g("margintop")), tw(g("marginbottom")),
+            tw(g("marginleft")), tw(g("marginright")))
+        return marker
+    except Exception:
+        return ""
+
+
+def _apply_page_setup_marker_odt(doc, attrs: str) -> None:
+    """Apply the marker to the document's page layout.
+
+    Creates/extends the WO_PageLayout automatic style and points the
+    Standard master page at it (creating the master when odfpy made none).
+    ponytail: the layout lives in content.xml automatic-styles (odfpy
+    limitation); LibreOffice honors it only when Standard references it
+    there — move to styles.xml automatic-styles if LO interop matters.
+    """
+    from odf.style import MasterPage, PageLayout, PageLayoutProperties
+    tw = lambda name: _twips_attr(attrs, name)
+    has_any = any(tw(n) for n in ("page-w", "page-h", "margin-top",
+                                  "margin-bottom", "margin-left", "margin-right"))
+    om = re.search(r'data-orient\s*=\s*"?(landscape|portrait)', attrs, re.I)
+    if not has_any and not om:
+        return
+    layout = None
+    for child in doc.automaticstyles.childNodes:
+        if (getattr(child, "qname", ("", ""))[1] == "page-layout"
+                and child.getAttribute("name") == "WO_PageLayout"):
+            layout = child
+            break
+    if layout is None:
+        layout = PageLayout(name="WO_PageLayout")
+        doc.automaticstyles.addElement(layout)
+    # One properties element carries everything; replace the previous one
+    # so a re-apply updates rather than duplicates.
+    for old in layout.getElementsByType(PageLayoutProperties):
+        layout.removeChild(old)
+    w, h = tw("page-w"), tw("page-h")
+    kwargs = {}
+    if w and h:
+        if (om and om.group(1).lower() == "landscape") != (w > h):
+            w, h = h, w  # keep w/h consistent with the orientation flag
+        kwargs.update(pagewidth=_odt_twips_to_len(w), pageheight=_odt_twips_to_len(h))
+    kwargs["printorientation"] = om.group(1).lower() if om else "portrait"
+    for attr, prop in (("margin-top", "margintop"), ("margin-bottom", "marginbottom"),
+                       ("margin-left", "marginleft"), ("margin-right", "marginright")):
+        if tw(attr):
+            kwargs[prop] = _odt_twips_to_len(tw(attr))
+    layout.addElement(PageLayoutProperties(**kwargs))
+    std = None
+    for child in doc.masterstyles.childNodes:
+        if (getattr(child, "qname", ("", ""))[1] == "master-page"
+                and child.getAttribute("name") == "Standard"):
+            std = child
+            break
+    if std is None:
+        doc.masterstyles.addElement(
+            MasterPage(name="Standard", pagelayoutname="WO_PageLayout"))
+    else:
+        std.setAttribute("pagelayoutname", "WO_PageLayout")
 
 
 def _master_page_section_to_html(section, resolve, pictures, changes=None) -> str:
@@ -1412,6 +1528,15 @@ def html_to_odt(html_fragment: str) -> bytes:
 
     doc = OpenDocumentText()
     w = _OdtWriter(doc)
+
+    # The page-setup marker (document page geometry, F-090/F-091/F-092)
+    # rides at body start; apply it to the page layout and strip it from
+    # the body before header/footer extraction. Applied before the header
+    # so add_header reuses the same WO_PageLayout instead of a fresh one.
+    ps_m = _PAGE_SETUP_RE.match(body)
+    if ps_m:
+        _apply_page_setup_marker_odt(doc, ps_m.group(1))
+        body = body[ps_m.end():]
 
     # Extract header and footer if present
     header_content = None

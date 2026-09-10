@@ -325,6 +325,7 @@
       undoStack.length = 0;
       redoStack.length = 0;
       lastSnapshot = editor.innerHTML;
+      applyPageView();  // map the page-setup marker (if any) to the canvas
       setStatus(data.blank ? t("Status.EmptyDocument") : t("Status.Ready"));
       updateUndoRedoState();
       updateCounts();
@@ -1148,7 +1149,7 @@
     lastFocusedEl = null;
     el.focus();
   }
-  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog"];
+  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog", "page-setup-dialog"];
   function getOpenDialog() {
     for (let i = 0; i < DIALOG_IDS.length; i++) {
       const d = document.getElementById(DIALOG_IDS[i]);
@@ -2796,6 +2797,107 @@
       aiProposeDialog.classList.add("open");
     }
     if (aiProposeInstruction) aiProposeInstruction.focus();
+  }
+
+  // ------------------------------------------------------------------
+  // Page setup (F-090 size / F-091 orientation / F-092 margins)
+  // ------------------------------------------------------------------
+  // The document's page geometry lives in the .page-setup marker div at
+  // body start (converter contract: DOCX w:sectPr / ODT page layout).
+  // Applying it also maps to the live canvas via CSS vars on <html>; the
+  // style.css fallbacks equal the previous fixed A4 look, so documents
+  // without a marker render exactly as before.
+  const PS_TWIPS_PER_PX = 15;  // 1440 twips/inch at 96 dpi
+  const PS_SIZES = { A4: [11906, 16838], Letter: [12240, 15840], Legal: [12240, 20160] };
+
+  function psMarker() {
+    return editor.querySelector(":scope > div.page-setup");
+  }
+
+  function applyPageView() {
+    const m = psMarker();
+    const rootStyle = document.documentElement.style;
+    if (!m) {
+      ["--wo-page-w", "--wo-pad-top", "--wo-pad-bottom", "--wo-pad-x"].forEach(
+        (p) => rootStyle.removeProperty(p));
+      return;
+    }
+    const px = (name) => (parseInt(m.getAttribute(name), 10) || 0) / PS_TWIPS_PER_PX;
+    rootStyle.setProperty("--wo-page-w", px("data-page-w").toFixed(1) + "px");
+    rootStyle.setProperty("--wo-pad-top", px("data-margin-top").toFixed(1) + "px");
+    rootStyle.setProperty("--wo-pad-bottom", px("data-margin-bottom").toFixed(1) + "px");
+    rootStyle.setProperty("--wo-pad-x",
+      Math.max(px("data-margin-left"), px("data-margin-right")).toFixed(1) + "px");
+  }
+
+  function writePageSetupMarker(w, h, orient, mt, mb, ml, mr) {
+    let m = psMarker();
+    if (!m) {
+      m = document.createElement("div");
+      m.className = "page-setup";
+      editor.insertBefore(m, editor.firstChild);
+    }
+    const attrs = { "data-page-w": w, "data-page-h": h, "data-orient": orient,
+                    "data-margin-top": mt, "data-margin-bottom": mb,
+                    "data-margin-left": ml, "data-margin-right": mr };
+    Object.keys(attrs).forEach((k) => m.setAttribute(k, String(attrs[k])));
+    applyPageView();
+    markDirty();
+    captureHistory();
+    scheduleCollabSync();
+    notifyHost("editing");
+    updateActiveStates();
+  }
+
+  const pageSetupDialog = document.getElementById("page-setup-dialog");
+  const psSize = document.getElementById("ps-size");
+  if (pageSetupDialog) {
+    document.getElementById("btn-page-setup").addEventListener("click", () => {
+      const m = psMarker();
+      const g = (name, dflt) => (m ? parseInt(m.getAttribute(name), 10) || dflt : dflt);
+      const w = g("data-page-w", 11906), h = g("data-page-h", 16838);
+      const known = Object.keys(PS_SIZES).find(
+        (k) => PS_SIZES[k][0] === w && PS_SIZES[k][1] === h);
+      psSize.value = known || "custom";
+      const orient = m ? (m.getAttribute("data-orient") || "portrait") : "portrait";
+      const radio = pageSetupDialog.querySelector('input[name="ps-orient"][value="' + orient + '"]');
+      if (radio) radio.checked = true;
+      const inches = (name) => (g(name, 1440) / 1440).toFixed(1);
+      document.getElementById("ps-mt").value = inches("data-margin-top");
+      document.getElementById("ps-mb").value = inches("data-margin-bottom");
+      document.getElementById("ps-ml").value = inches("data-margin-left");
+      document.getElementById("ps-mr").value = inches("data-margin-right");
+      rememberFocus();
+      pageSetupDialog.classList.add("open");
+    });
+    psSize.addEventListener("change", () => {
+      if (psSize.value !== "custom") {
+        const [w, h] = PS_SIZES[psSize.value];
+        pageSetupDialog.dataset.w = w;
+        pageSetupDialog.dataset.h = h;
+      }
+    });
+    document.getElementById("btn-ps-cancel").addEventListener("click", () => {
+      pageSetupDialog.classList.remove("open");
+      restoreFocus();
+    });
+    document.getElementById("btn-ps-apply").addEventListener("click", () => {
+      let w, h;
+      if (psSize.value === "custom") {
+        w = parseInt(pageSetupDialog.dataset.w, 10) || 11906;
+        h = parseInt(pageSetupDialog.dataset.h, 10) || 16838;
+      } else {
+        [w, h] = psSize.value.split("x").map(Number);
+      }
+      const orient = (pageSetupDialog.querySelector('input[name="ps-orient"]:checked') || {}).value || "portrait";
+      if (orient === "landscape" && w <= h) { const t = w; w = h; h = t; }
+      if (orient === "portrait" && w > h) { const t = w; w = h; h = t; }
+      const inches = (id) => Math.round((parseFloat(document.getElementById(id).value) || 1) * 1440);
+      writePageSetupMarker(w, h, orient,
+        inches("ps-mt"), inches("ps-mb"), inches("ps-ml"), inches("ps-mr"));
+      pageSetupDialog.classList.remove("open");
+      restoreFocus();
+    });
   }
   async function runAiPropose() {
     if (!aiProposeDialog) return;

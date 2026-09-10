@@ -918,15 +918,18 @@ main {
 }
 
 #editor {
-  /* A4 page at 96dpi with 1-inch margins, matching the OO golden's paper
-     geometry (page x325-1119, first text line 96px in from top/left). */
-  width: min(794px, 100%);
+  /* Page canvas. Geometry is driven by the .page-setup marker via CSS vars
+     (applyPageView in editor.js); the fallbacks are the fixed A4 look the
+     OO golden baseline was captured with (page x325-1119, first text line
+     96px in from top/left), so documents without page setup render
+     unchanged. */
+  width: min(var(--wo-page-w, 794px), 100%);
   min-height: calc(100vh - 228px); /* fills to the statusbar like the OO golden */
   background: var(--paper);
   color: var(--ink);
   border-radius: 0; /* OO golden: crisp page edge, flat backdrop (no shadow) */
   border: 1px solid var(--border);
-  padding: 96px;
+  padding: var(--wo-pad-top, 96px) var(--wo-pad-x, 96px) var(--wo-pad-bottom, 96px);
   position: relative;
   left: 2px; /* OO page sits at x325-1119, centered would be x323-1117 */
   font-size: 8px; /* golden-effective scale: OO renders this doc at ~half 12pt */
@@ -1288,3 +1291,23 @@ button.active {
 }
 .review-actions { display: flex; gap: 6px; }
 .review-empty { padding: 12px; color: #888; }
+
+/* Page setup dialog: margin inputs in a 2x2 grid; radio labels inline. */
+.ps-margins {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+.ps-margins label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+.ps-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 12px;
+  font-weight: normal;
+}

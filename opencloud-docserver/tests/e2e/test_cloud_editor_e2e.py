@@ -997,3 +997,56 @@ def test_command_recorder_replay_dom_hash(servers):
         finally:
             ctx.close()
             browser.close()
+
+
+def test_page_setup_dialog_roundtrips_to_host(servers):
+    """F-090/F-091/F-092: the page-setup dialog writes the marker, the live
+    canvas follows the settings, and the save carries w:pgSz/w:pgMar."""
+    from playwright.sync_api import sync_playwright
+
+    seed = _seed_doc(servers, "ps.docx", text="Page setup body")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context()
+            parent = ctx.new_page()
+            parent.goto(_parent_url(servers, seed))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "Page setup body" in _frame_text(frame))
+
+            _open_ribbon_tab(frame, "layout")
+            frame.locator("#btn-page-setup").click()
+            assert frame.locator("#page-setup-dialog").evaluate(
+                "d => d.classList.contains('open')")
+            frame.locator("#ps-size").select_option("11906x16838")  # A4
+            frame.locator('input[name="ps-orient"][value="landscape"]').check()
+            frame.locator("#ps-mt").fill("0.8")
+            frame.locator("#ps-ml").fill("1.2")
+
+            # marker at body start + canvas mapped (console/pageerror capture
+            # rides on the parent page — Frame has no pageerror event)
+            errors = []
+            parent.on("pageerror", lambda e: errors.append(str(e)))
+            parent.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+            frame.locator("#btn-ps-apply").click()
+            frame.wait_for_selector("#editor > div.page-setup", state="attached", timeout=5000)
+            marker = frame.locator("#editor > div.page-setup")
+            assert marker.get_attribute("data-page-w") == "16838"   # landscape A4
+            assert marker.get_attribute("data-orient") == "landscape"
+            assert marker.get_attribute("data-margin-top") == "1152"
+            assert frame.evaluate(
+                "getComputedStyle(document.documentElement)"
+                ".getPropertyValue('--wo-page-w').trim()") == "1122.5px"
+            assert not errors, errors
+
+            frame.locator("#btn-save").click()
+            _wait(lambda: "16838" in _host_html(servers, seed))
+            host_html = _host_html(servers, seed)
+            assert 'data-page-w="16838"' in host_html
+            assert 'data-orient="landscape"' in host_html
+            assert 'data-margin-top="1152"' in host_html
+        finally:
+            ctx.close()
+            browser.close()

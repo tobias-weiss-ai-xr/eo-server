@@ -434,9 +434,7 @@
     <button id="btn-page-break" title="Insert page break" aria-label="Insert page break">⏎</button>
     <button id="btn-section-break" title="Insert section break" aria-label="Insert section break">⇘</button>
     <button id="btn-columns" title="Insert columns" aria-label="Insert columns">▥</button>
-    <button type="button" data-stub="layout.margins" data-i18n="Layout.Margins">Margins</button>
-    <button type="button" data-stub="layout.orientation" data-i18n="Layout.Orientation">Orientation</button>
-    <button type="button" data-stub="layout.size" data-i18n="Layout.Size">Size</button>
+    <button type="button" id="btn-page-setup" data-i18n="Layout.PageSetup">Page setup</button>
     <button type="button" data-stub="layout.hyphenation" data-i18n="Layout.Hyphenation">Hyphenation</button>
     <button type="button" data-stub="layout.line-numbers" data-i18n="Layout.LineNumbers">Line numbers</button>
     <button type="button" data-stub="layout.watermark" data-i18n="Layout.Watermark">Watermark</button>
@@ -892,6 +890,43 @@
       <div class="dialog-actions">
         <button id="btn-ai-propose-cancel">Cancel</button>
         <button id="btn-ai-propose-run" class="primary">Propose</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page setup dialog (F-090/F-091/F-092): size/orientation/margins are
+       applied as the .page-setup marker at body start, which the converters
+       round-trip to DOCX w:sectPr and ODT page layout, and which maps to
+       the live canvas via CSS vars. -->
+  <div id="page-setup-dialog" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="page-setup-title">
+    <div class="dialog">
+      <h3 id="page-setup-title">Page setup</h3>
+      <div class="dialog-field">
+        <label for="ps-size">Size</label>
+        <select id="ps-size">
+          <option value="11906x16838">A4</option>
+          <option value="12240x15840">Letter</option>
+          <option value="12240x20160">Legal</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="dialog-field">
+        <label>Orientation</label>
+        <label class="ps-radio"><input type="radio" name="ps-orient" value="portrait" checked> Portrait</label>
+        <label class="ps-radio"><input type="radio" name="ps-orient" value="landscape"> Landscape</label>
+      </div>
+      <div class="dialog-field">
+        <label>Margins (inches)</label>
+        <div class="ps-margins">
+          <label>Top <input id="ps-mt" type="number" min="0" max="9" step="0.1" value="1"></label>
+          <label>Bottom <input id="ps-mb" type="number" min="0" max="9" step="0.1" value="1"></label>
+          <label>Left <input id="ps-ml" type="number" min="0" max="9" step="0.1" value="1"></label>
+          <label>Right <input id="ps-mr" type="number" min="0" max="9" step="0.1" value="1"></label>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button id="btn-ps-cancel">Cancel</button>
+        <button id="btn-ps-apply" class="primary">Apply</button>
       </div>
     </div>
   </div>

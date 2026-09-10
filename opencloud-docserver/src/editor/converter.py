@@ -858,7 +858,7 @@ def _docx_to_html(data: bytes) -> str:
         parts.append(_table_to_html(table, notes))
 
     # Build the final HTML with header/footer
-    html_parts = []
+    html_parts = [_page_setup_marker_from_docx(doc)]
     if header_html:
         html_parts.append(f'<header class="page-header">{header_html}</header>')
     html_parts.extend(parts)
@@ -2176,6 +2176,111 @@ class _TableParser(HTMLParser):
 _TAG_TABLE = re.compile(r"<figure>.*?</figure>|<table[^>]*>.*?</table>", re.S)
 
 
+# --------------------------------------------------------------------------
+# Page setup marker (F-090 page size / F-091 orientation / F-092 margins)
+# --------------------------------------------------------------------------
+# Document-level page geometry rides as an empty marker div at body start:
+#   <div class="page-setup" data-page-w="11906" data-page-h="16838"
+#        data-orient="landscape" data-margin-top="1134"
+#        data-margin-bottom="1134" data-margin-left="1417"
+#        data-margin-right="1417"></div>
+# All values are twips (twentieths of a point). docx_to_html emits it from
+# w:sectPr (w:pgSz + w:pgMar); html_to_docx applies it back. The ODT
+# converters map the same marker to style:page-layout-properties.
+
+_PAGE_SETUP_RE = re.compile(
+    r'\s*<div\s+class="page-setup"([^>]*)>\s*</div>', re.I)
+
+
+def _twips_attr(attrs: str, name: str) -> int | None:
+    m = re.search(rf'data-{name}\s*=\s*"?(-?\d+)', attrs)
+    return int(m.group(1)) if m else None
+
+
+def _page_setup_marker(w: int | None, h: int | None, orient: str | None,
+                       mt: int | None, mb: int | None,
+                       ml: int | None, mr: int | None) -> str:
+    """Build the marker div from twip values; None drops the attribute.
+    A marker with no attributes at all is not emitted."""
+    pairs = [("page-w", w), ("page-h", h), ("orient", orient),
+             ("margin-top", mt), ("margin-bottom", mb),
+             ("margin-left", ml), ("margin-right", mr)]
+    attrs = "".join(
+        f' data-{k}="{escape(str(v))}"' for k, v in pairs if v is not None)
+    if not attrs:
+        return ""
+    return f'<div class="page-setup"{attrs}></div>'
+
+
+def _page_setup_marker_from_docx(doc) -> str:
+    """Marker for the document's section page geometry — but ONLY when it
+    differs from python-docx's Letter defaults. Emitting a marker for every
+    default document would churn every exact-HTML assert in the corpus for
+    zero information; absence of the marker simply means 'the defaults'."""
+    try:
+        sec = doc.sections[0]
+        to_tw = lambda emu: int(round(int(emu) / 635)) if emu else None
+        vals = {
+            "w": to_tw(sec.page_width), "h": to_tw(sec.page_height),
+            "mt": to_tw(sec.top_margin), "mb": to_tw(sec.bottom_margin),
+            "ml": to_tw(sec.left_margin), "mr": to_tw(sec.right_margin),
+        }
+        defaults = _docx_default_geometry()
+        orient = None
+        if str(sec.orientation or "").upper().endswith("LANDSCAPE"):
+            orient = "landscape"
+        elif vals["w"] and vals["h"] and vals["w"] > vals["h"]:
+            orient = "landscape"
+        if not orient and all(vals[k] == defaults[k] for k in vals):
+            return ""
+        return _page_setup_marker(
+            vals["w"], vals["h"], orient,
+            vals["mt"], vals["mb"], vals["ml"], vals["mr"])
+    except Exception:
+        return ""
+
+
+_DOCX_DEFAULT_GEOMETRY: dict | None = None
+
+
+def _docx_default_geometry() -> dict:
+    """The python-docx template's section geometry in twips (cached)."""
+    global _DOCX_DEFAULT_GEOMETRY
+    if _DOCX_DEFAULT_GEOMETRY is None:
+        sec = Document().sections[0]
+        to_tw = lambda emu: int(round(int(emu) / 635)) if emu else None
+        _DOCX_DEFAULT_GEOMETRY = {
+            "w": to_tw(sec.page_width), "h": to_tw(sec.page_height),
+            "mt": to_tw(sec.top_margin), "mb": to_tw(sec.bottom_margin),
+            "ml": to_tw(sec.left_margin), "mr": to_tw(sec.right_margin),
+        }
+    return _DOCX_DEFAULT_GEOMETRY
+
+
+def _apply_page_setup_marker(attrs: str, section) -> None:
+    """Apply marker attributes to a python-docx section (twips -> EMU)."""
+    from docx.enum.section import WD_ORIENT
+
+    def emu(name):
+        tw = _twips_attr(attrs, name)
+        return Emu(tw * 635) if tw else None
+
+    if _twips_attr(attrs, "page-w"):
+        section.page_width = emu("page-w")
+    if _twips_attr(attrs, "page-h"):
+        section.page_height = emu("page-h")
+    om = re.search(r'data-orient\s*=\s*"?(landscape|portrait)', attrs, re.I)
+    if om:
+        section.orientation = (WD_ORIENT.LANDSCAPE if om.group(1).lower() == "landscape"
+                               else WD_ORIENT.PORTRAIT)
+    for attr, prop in (("margin-top", "top_margin"),
+                       ("margin-bottom", "bottom_margin"),
+                       ("margin-left", "left_margin"),
+                       ("margin-right", "right_margin")):
+        if _twips_attr(attrs, attr):
+            setattr(section, prop, emu(attr))
+
+
 def html_to_docx(html_fragment: str) -> bytes:
     """Convert an HTML fragment into DOCX bytes."""
     # A <section data-columns> wrapper carries section-column layout
@@ -2192,12 +2297,24 @@ def html_to_docx(html_fragment: str) -> bytes:
         if gm:
             section_gap = int(gm.group(1))
         html_fragment = sec_m.group(2)
+    # The page-setup marker (document page geometry, F-090/F-091/F-092)
+    # rides at body start; apply it to the section properties and strip it
+    # from the body so it never becomes a paragraph.
+    ps_m = _PAGE_SETUP_RE.match(html_fragment)
+    ps_attrs = ps_m.group(1) if ps_m else None
+    if ps_m:
+        html_fragment = html_fragment[ps_m.end():]
     # Split tables out; python-docx tables and paragraphs share the body
     # but order interleaving is complex — append tables at the end.
     tables_html = _TAG_TABLE.findall(html_fragment)
     body = _TAG_TABLE.sub("", html_fragment)
 
     doc = Document()
+    if ps_attrs:
+        try:
+            _apply_page_setup_marker(ps_attrs, doc.sections[0])
+        except Exception:
+            pass  # a malformed marker degrades to document defaults
     if section_cols and section_cols > 1:
         sectPr = doc.sections[0]._sectPr
         if sectPr is None:
