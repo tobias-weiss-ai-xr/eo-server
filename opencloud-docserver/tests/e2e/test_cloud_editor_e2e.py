@@ -162,8 +162,10 @@ def _editor_url(servers: dict, seed: dict | None = None) -> str:
     )
 
 
-def _parent_url(servers: dict, seed: dict | None = None) -> str:
-    return f"http://127.0.0.1:{servers['parent_port']}/?editor={urllib.parse.quote(_editor_url(servers, seed), safe='')}"
+def _parent_url(servers: dict, seed: dict | None = None, extra: str = "") -> str:
+    # `extra` rides on the editor iframe URL (e.g. "&record=1" for the
+    # command recorder) — the parent page only forwards ?editor=.
+    return f"http://127.0.0.1:{servers['parent_port']}/?editor={urllib.parse.quote(_editor_url(servers, seed) + extra, safe='')}"
 
 
 def _seed_doc(servers: dict, name: str = "t.docx", text: str = "E2E base text") -> dict:
@@ -908,6 +910,90 @@ def test_ai_propose_lands_as_tracked_change_accept_persists(servers):
             # Save persists the accepted proposal to the host.
             frame.locator("#btn-save").click()
             _wait(lambda: "Alpha check gamma" in _host_text(servers, seed))
+        finally:
+            ctx.close()
+            browser.close()
+
+
+def test_command_recorder_replay_dom_hash(servers):
+    """v4-2: opt-in JSONL command recorder + deterministic replay.
+
+    ?record=1 logs every emitCommand (with plain-text selection offsets).
+    Replaying the log against a fresh load of the same document reproduces
+    the exact editor DOM (hash equality). Without the flag nothing is
+    recorded.
+    """
+    from playwright.sync_api import sync_playwright
+
+    seed = _seed_doc(servers, "rec.docx", text="Recorder alpha beta")
+
+    _SET_RANGE = """([at, end]) => {
+      const ed = document.getElementById('editor');
+      ed.focus();
+      let pos = 0, sn = null, so = 0, en = null, eo = 0;
+      const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        const len = n.data.length;
+        if (!sn && pos + len >= at) { sn = n; so = at - pos; }
+        if (sn && pos + len >= end) { en = n; eo = end - pos; break; }
+        pos += len;
+      }
+      const r = document.createRange();
+      if (!en) { r.setStart(sn, Math.min(so, sn.data.length)); r.collapse(true); }
+      else { r.setStart(sn, so); r.setEnd(en, eo); }
+      const sel = getSelection();
+      sel.removeAllRanges(); sel.addRange(r);
+    }"""
+
+    def _bus(frame, cmd, value=None, at=None, end=None):
+        """Set a selection (span at..end or collapsed caret at) and run cmd."""
+        if at is not None:
+            frame.evaluate(_SET_RANGE, [at, end if end is not None else at])
+        frame.evaluate(
+            "([c, v]) => dispatchEvent(new CustomEvent('wo-command',"
+            " { detail: { command: c, value: v } }))",
+            [cmd, value],
+        )
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context()
+            parent = ctx.new_page()
+
+            # opt-in check: without record=1 nothing is logged
+            parent.goto(_parent_url(servers, seed))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "Recorder alpha beta" in _frame_text(frame))
+            _bus(frame, "bold", at=9, end=14)
+            assert frame.evaluate("window.__COMMAND_LOG__.length") == 0
+            parent.reload()
+
+            # recorded pass
+            parent.goto(_parent_url(servers, seed, extra="&record=1"))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "Recorder alpha beta" in _frame_text(frame))
+            _bus(frame, "bold", at=9, end=14)      # bold the word "alpha"
+            _bus(frame, "formatBlock", "H1", at=9)  # block under selection -> H1
+            _bus(frame, "lineHeight", "1.5", at=0)  # caret at doc start
+            _bus(frame, "insertHR", at=0)           # hr at caret
+            log = frame.evaluate("window.__COMMAND_LOG__")
+            assert [e["command"] for e in log] == [
+                "bold", "formatBlock", "lineHeight", "insertHR"]
+            h1 = frame.evaluate("commandDomHash()")
+            jsonl = "\n".join(json.dumps(e) for e in log)
+
+            # replay pass: fresh load, feed the JSONL back
+            parent.goto(_parent_url(servers, seed, extra="&record=1"))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "Recorder alpha beta" in _frame_text(frame))
+            h2 = frame.evaluate(
+                "jsonl => replayCommands(jsonl.split('\\n'))", jsonl)
+            assert h1 == h2, f"DOM hash diverged on replay: {h1} != {h2}"
         finally:
             ctx.close()
             browser.close()

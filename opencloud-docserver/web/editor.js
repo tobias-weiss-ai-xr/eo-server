@@ -44,6 +44,9 @@
   // src/editor/router.py); ODT files round-trip through the odfpy converter.
   const DOC_FORMAT = /\.odt$/i.test(DOC_NAME) ? "odt" : "docx";
   const READ_ONLY = window.__READ_ONLY__ === true;
+  // Agent command recorder: opt-in via ?record=1 (see emitCommand).
+  window.__RECORD_COMMANDS__ = /[?&]record=1/.test(window.location.search);
+  window.__COMMAND_LOG__ = [];
   let trackChangesOn = false;
   const TRACK_AUTHOR = window.__USER_NAME__ || "You";
   let commentRange = null;
@@ -2052,8 +2055,56 @@
   window.addEventListener("wo-command", (ev) => {
     const detail = ev.detail || {};
     if (typeof detail.command !== "string" || !detail.command) return;
+    if (window.__RECORD_COMMANDS__) recordCommand(detail.command, detail.value);
     runCommand(detail.command, detail.value == null ? null : String(detail.value));
   });
+
+  // --- agent command recorder (opt-in: ?record=1) -------------------
+  // Every command ON THE BUS is logged as one replayable JSON line — the
+  // listener records, so externally dispatched agent commands are captured
+  // too, not just UI button presses. Plain-text selection offsets ride
+  // along so replay can restore the selection context before
+  // re-dispatching (commands are selection-scoped). The log is the session
+  // artifact: JSON.stringify each entry for the .jsonl file.
+  function recordCommand(cmd, value) {
+    const sel = window.getSelection();
+    const selLen = sel && sel.rangeCount ? sel.toString().length : 0;
+    const end = caretOffset(editor);
+    window.__COMMAND_LOG__.push({
+      t: Math.round(performance.now()),
+      command: cmd,
+      value: value == null ? null : String(value),
+      at: Math.max(0, end - selLen),
+      len: selLen,
+    });
+  }
+  // Replays entries (objects or JSONL strings) against the current document
+  // and returns the resulting DOM hash for the record->replay equality gate.
+  function replayCommands(entries) {
+    (entries || []).forEach((e) => {
+      if (typeof e === "string") e = JSON.parse(e);
+      const at = e.at || 0, len = e.len || 0;
+      const r = logicalRange(at, at + len);
+      if (r) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+      window.dispatchEvent(new CustomEvent("wo-command", {
+        detail: { command: e.command, value: e.value == null ? null : String(e.value) },
+      }));
+    });
+    return commandDomHash();
+  }
+  function commandDomHash() {
+    const html = editor.innerHTML;
+    let h = 5381;
+    for (let i = 0; i < html.length; i++) h = ((h << 5) + h + html.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(16);
+  }
+  // Agent entry points (the rest of the editor is IIFE-private).
+  window.replayCommands = replayCommands;
+  window.commandDomHash = commandDomHash;
 
   // ------------------------------------------------------------------
   // Find and replace
