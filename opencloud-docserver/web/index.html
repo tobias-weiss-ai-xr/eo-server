@@ -510,6 +510,20 @@
     <button class="sb sb-add-comment" style="--sb-x: 1417px" title="Add comment" aria-label="Add comment" aria-keyshortcuts="Control+Alt+M"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button>
   </footer>
 
+  <!-- Right-click context menu (OO parity geometry). Honest subset: only
+       actions WO can really perform — OO's spellcheck/language/style/AI rows
+       are features WO does not implement (see features.yaml divergences). -->
+  <div id="ctx-menu" role="menu" aria-label="Context menu" hidden>
+    <button type="button" role="menuitem" data-ctx="cut" data-i18n="Ctx.Cut">Cut</button>
+    <button type="button" role="menuitem" data-ctx="copy" data-i18n="Ctx.Copy">Copy</button>
+    <button type="button" role="menuitem" data-ctx="paste" data-i18n="Ctx.Paste">Paste</button>
+    <div class="ctx-sep" role="separator"></div>
+    <button type="button" role="menuitem" data-ctx="pagebreak" data-i18n="Ctx.PageBreakBefore">Page break before</button>
+    <div class="ctx-sep" role="separator"></div>
+    <button type="button" role="menuitem" data-ctx="comment" data-i18n="Ctx.AddComment">Add comment</button>
+    <button type="button" role="menuitem" data-ctx="link" data-i18n="Ctx.Link">Link</button>
+  </div>
+
   <!-- Insert-table dialog (modal): rows/cols picked here, then a real
        <table> is inserted at the saved cursor position. -->
   <div id="table-dialog" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="table-dialog-title">

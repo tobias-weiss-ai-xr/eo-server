@@ -2867,6 +2867,51 @@
     });
   });
 
+  // --- right-click context menu on the editing surface ----------------
+  // OO parity: same geometry (210px, 26px rows) and item order as OO's
+  // document context menu, restricted to the honest subset of actions WO
+  // can perform (cut/copy/paste, page break, comment, link). Cut/copy/
+  // paste go through execCommand so the existing input-event autosave and
+  // snapshot chain arm exactly as for keyboard edits.
+  const ctxMenu = document.getElementById("ctx-menu");
+  if (ctxMenu) {
+    const editorEl = document.getElementById("editor");
+    const closeCtx = () => { ctxMenu.hidden = true; };
+    editorEl.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      ctxMenu.hidden = false;
+      const r = ctxMenu.getBoundingClientRect();
+      ctxMenu.style.left = Math.max(4, Math.min(e.clientX + 2, window.innerWidth - r.width - 4)) + "px";
+      ctxMenu.style.top = Math.max(4, Math.min(e.clientY + 2, window.innerHeight - r.height - 4)) + "px";
+    });
+    // keep the editor selection alive when pressing menu rows
+    ctxMenu.addEventListener("mousedown", (e) => e.preventDefault());
+    ctxMenu.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-ctx]");
+      if (!btn) return;
+      closeCtx();
+      const action = btn.dataset.ctx;
+      if (action === "cut" || action === "copy") {
+        document.execCommand(action);
+      } else if (action === "paste") {
+        navigator.clipboard.readText().then((text) => {
+          if (text) document.execCommand("insertText", false, text);
+        }).catch(() => {});
+      } else if (action === "pagebreak") {
+        emitCommand("insertPageBreak");
+      } else if (action === "comment") {
+        openCommentDialog();
+      } else if (action === "link") {
+        insertLink();
+      }
+    });
+    document.addEventListener("mousedown", (e) => {
+      if (!ctxMenu.hidden && !ctxMenu.contains(e.target)) closeCtx();
+    });
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCtx(); });
+    window.addEventListener("blur", closeCtx);
+  }
+
   function toggleFullscreen() {
     document.body.classList.toggle("fullscreen");
     if (document.fullscreenElement) {

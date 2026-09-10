@@ -648,6 +648,40 @@ body {
 
 .menu-item-export { position: relative; }
 
+/* Right-click context menu — OO parity geometry: 210px panel, 26px rows,
+   label column at +38px matching OO's icon+label rhythm. */
+#ctx-menu {
+  position: fixed;
+  z-index: 90;
+  width: 210px;
+  margin: 0;
+  padding: 4px 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+#ctx-menu[hidden] { display: none; }
+#ctx-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px 14px 5px 38px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+}
+#ctx-menu button:hover,
+#ctx-menu button:focus-visible { background: var(--menu-hover, rgba(0,0,0,0.08)); outline: none; }
+#ctx-menu .ctx-sep {
+  height: 1px;
+  margin: 3px 0;
+  background: var(--border);
+}
+
 .menu-sep {
   height: 1px;
   margin: 4px 0;
