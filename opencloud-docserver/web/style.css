@@ -287,7 +287,7 @@ body {
   height: 32px;
   max-width: 110px;
   padding: 0 6px;
-  border: 1px solid var(--border);
+  border: 1px solid transparent; /* OO renders the font widgets borderless */
   border-radius: 6px;
   background: var(--bg);
   color: var(--text);
@@ -295,7 +295,7 @@ body {
   cursor: pointer;
 }
 
-.toolbar .toolbar-select:focus { outline: none; border-color: var(--accent); }
+.toolbar .toolbar-select:focus { outline: 1px solid var(--accent); border-color: transparent; }
 .toolbar .toolbar-select:disabled { opacity: 0.45; cursor: default; }
 
 /* Font size is narrow; family and spacing get a bit more room */
@@ -748,28 +748,40 @@ html.light .statusbar { background: #fdfdfd; }  /* OO golden: near-white bar */
 .statusbar button:hover { background: var(--hover); color: var(--text); }
 .statusbar .sb svg { display: block; }
 .statusbar .sb { color: var(--muted); }
+/* OO renders the zoom +/fit actions as bordered square buttons */
+.statusbar .sb-boxed {
+  width: 26px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #a0a0a0;
+  border-radius: 3px;
+  background: var(--bg);
+}
 /* Styled range: dark end caps + thumb → reads like the OO zoom slider */
 .zoom-slider {
-  width: 92px;
+  width: 70px;
   -webkit-appearance: none;
   appearance: none;
   height: 18px;
   background: transparent;
   cursor: pointer;
 }
+/* OO's slider reads as: dark start box, light gap, filled segment, light gap,
+   small dark thumb near the right end. */
 .zoom-slider::-webkit-slider-runnable-track {
-  height: 6px;
-  border-radius: 3px;
+  height: 12px;
+  border-radius: 2px;
   background: linear-gradient(90deg,
-    #6b6b6b 0 18px, #d9d9d9 18px calc(100% - 18px), #6b6b6b calc(100% - 18px));
+    #6b6b6b 0 20px, #d9d9d9 20px 31px, #6b6b6b 31px 51px,
+    #d9d9d9 51px 65px, #6b6b6b 65px 70px);
 }
 .zoom-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #4a4a4a;
-  margin-top: -5px;
+  width: 8px;
+  height: 12px;
+  background: transparent; /* the track gradient carries OO's look */
 }
 .offline-indicator {
   font-size: 12px;

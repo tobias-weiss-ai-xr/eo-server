@@ -692,7 +692,7 @@ def test_inline_format_commands_code_caps_strike(servers):
               const sel = window.getSelection();
               sel.removeAllRanges(); sel.addRange(range);
             }""")
-            frame.locator("button[data-cmd='code']").click()
+            frame.locator("button.rb[data-cmd='code']").click()
             frame.locator("#editor").evaluate("""() => {
               const ed = document.getElementById('editor');
               const t = ed.querySelector('p:last-of-type');
