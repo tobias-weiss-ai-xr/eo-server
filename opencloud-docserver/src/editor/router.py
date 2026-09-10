@@ -24,6 +24,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingRes
 from fastapi.templating import Jinja2Templates
 
 from ..ai.review import agent_ops, reject_agent_ops
+from ..ai.propose import propose as ai_propose_run, DEFAULT_MAX_OPS, DEFAULT_MAX_STEPS
+from ..ai.tools import ToolContext
 from ..editor.collab import get_hub
 from ..editor.converter import docx_to_html, html_to_docx
 from ..editor.odt_converter import html_to_odt, odt_to_html
@@ -1018,6 +1020,62 @@ async def ai_review_reject(doc_id: str, request: Request) -> JSONResponse:
         if not isinstance(revs, list) or not all(isinstance(r, int) for r in revs):
             return JSONResponse({"error": "revs must be a list of ints"}, status_code=400)
     return JSONResponse(reject_agent_ops(hub, doc_id, revs))
+
+
+@router.post("/api/documents/{doc_id}/ai/propose")
+async def ai_propose(doc_id: str, request: Request) -> JSONResponse:
+    """AI proposal: ``{"instruction": str, "model": str?}`` -> applied edit
+    ops. Runs a registered model (``ai.propose.MODEL_REGISTRY``; the server
+    itself never calls a vendor) through the agent tool surface, so every
+    edit is attributed ``agent=ai-propose:<model>`` and lands in ``/ai/review``
+    for per-op accept/reject. Response carries the new ops in text
+    coordinates so an editor can project them as tracked-change spans."""
+    if invalid_doc_id(doc_id):
+        return JSONResponse({"error": "Invalid file id"}, status_code=400)
+    try:
+        payload = json.loads(await request.body())
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse({"error": "invalid JSON"}, status_code=400)
+    if not isinstance(payload, dict):
+        return JSONResponse({"error": "invalid JSON"}, status_code=400)
+    instruction = str(payload.get("instruction") or "").strip()
+    if not instruction:
+        return JSONResponse({"error": "instruction required"}, status_code=400)
+    store = _store(request)
+    if store.get(doc_id) is None:
+        # WOPI-mode documents live on the host until first save; materialize
+        # the current bytes into the store so the agent tool surface (which
+        # reads baselines from the store) sees the same document the hub has.
+        data = _load_bytes(request, doc_id)
+        if not data:
+            return JSONResponse({"error": "Document not found"}, status_code=404)
+        store.init(doc_id, _doc_name(request, doc_id))
+        store.put_content(doc_id, data)
+    cfg = getattr(request.app.state, "config", None)
+    if cfg is not None and not getattr(cfg, "agents_enabled", True):
+        return JSONResponse({"error": "agents disabled"}, status_code=403)
+    hub = get_hub()
+    hub.ensure(doc_id, _collab_base_text(request, doc_id))
+    since_rev = len(hub.ensure(doc_id).log)
+    ctx = ToolContext(
+        store=store,
+        hub=hub,
+        agents_enabled=True if cfg is None else getattr(cfg, "agents_enabled", True),
+    )
+    try:
+        max_steps = min(int(payload.get("max_steps", DEFAULT_MAX_STEPS)), DEFAULT_MAX_STEPS)
+        max_ops = min(int(payload.get("max_ops", DEFAULT_MAX_OPS)), DEFAULT_MAX_OPS)
+    except (TypeError, ValueError):
+        max_steps, max_ops = DEFAULT_MAX_STEPS, DEFAULT_MAX_OPS
+    out = ai_propose_run(
+        ctx, doc_id, instruction,
+        model_name=str(payload.get("model") or "default"),
+        max_steps=max_steps, max_ops=max_ops,
+    )
+    if not out.get("ok"):
+        return JSONResponse(out, status_code=int(out.get("status", 500)))
+    listing = agent_ops(hub, doc_id, since_rev=since_rev)
+    return JSONResponse({**out, "ops": listing["ops"]})
 
 
 # ----------------------------------------------------------------------

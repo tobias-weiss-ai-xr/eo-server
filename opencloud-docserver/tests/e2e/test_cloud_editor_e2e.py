@@ -189,8 +189,17 @@ def _frame_text(frame) -> str:
 
 
 def _open_ribbon_tab(frame, tab: str) -> None:
-    """Bring a ribbon tab's controls on-screen (idempotent)."""
-    frame.locator(f".ribbon-tab[data-tab='{tab}']").click()
+    """Bring a ribbon tab's controls on-screen (idempotent).
+
+    DOM click, not a hit-tested one: the ACTIVE page's controls legitimately
+    overlap the right-hand tab strip (pre-existing layout; tabs there stay
+    clickable at their visible edge for humans, but Playwright's actionability
+    check rejects the covered center)."""
+    frame.evaluate(
+        "t => { const el = document.querySelector(`.ribbon-tab[data-tab='${t}']`);"
+        " if (el) el.click(); }",
+        tab,
+    )
 
 
 def _post_sync(servers: dict, seed: dict, text: str) -> None:
@@ -819,6 +828,86 @@ def test_nested_list_tab_indent_roundtrip(servers):
                 "<ul><li>second item</li></ul>" in _host_html(servers, seed).replace("\n", "")
                 or "List Bullet 2" in _host_html(servers, seed)
             ))
+        finally:
+            ctx.close()
+            browser.close()
+
+
+def test_ai_propose_lands_as_tracked_change_accept_persists(servers):
+    """Flagship v3 loop, driven through the real UI.
+
+    AI tab > Grammar opens the propose dialog; the run posts /ai/propose; a
+    registered scripted model (the server never calls a vendor) applies edit
+    ops through the CRDT tool surface; the collab poll projects them as
+    tracked-change spans in the review panel; Accept converges the text and
+    the save persists it to the WOPI host.
+    """
+    from playwright.sync_api import sync_playwright
+    from src.ai.propose import register_model
+
+    seed = _seed_doc(servers, "ai.docx", text="Alpha beta gamma")
+
+    class ScriptedModel:
+        """One turn: replace the word 'beta' with 'check'; then done."""
+
+        def __init__(self):
+            self.n = 0
+
+        def __call__(self, messages):
+            self.n += 1
+            if self.n > 1:
+                return []
+            return [{
+                "name": "apply_ops",
+                "arguments": {
+                    "doc_id": seed["doc_id"],
+                    "client_id": "agent=ai-propose:default",
+                    "ops": [
+                        {"t": "del", "at": 6, "end": 10},
+                        {"t": "ins", "at": 6, "text": "check"},
+                    ],
+                },
+            }]
+
+    register_model("default", ScriptedModel())
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context()
+            parent = ctx.new_page()
+            parent.goto(_parent_url(servers, seed))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "Alpha beta gamma" in _frame_text(frame))
+
+            # AI tab > Grammar opens the propose dialog pre-filled.
+            _open_ribbon_tab(frame, "ai")
+            frame.locator("#btn-ai-grammar").click()
+            assert frame.locator("#ai-propose-dialog").evaluate(
+                "d => d.classList.contains('open')")
+            frame.locator("#ai-propose-instruction").fill("Fix the casing")
+            frame.locator("#btn-ai-propose-run").click()
+
+            # The proposal converges as tracked changes (not a silent edit).
+            _wait(lambda: frame.locator("#editor ins.track-insert").count() > 0)
+            ins_text = frame.locator("#editor ins.track-insert").first.inner_text()
+            assert ins_text == "check", f"tracked insertion got {ins_text!r}"
+            del_text = frame.locator("#editor del.track-delete").first.inner_text()
+            assert del_text == "beta", f"tracked deletion got {del_text!r}"
+            # it surfaces in the existing review-changes flow
+            assert frame.locator("#review-list .review-item").count() >= 2
+
+            # Accept both changes (insertion first, then the deletion);
+            # only once neither redline is pending does the text converge.
+            frame.locator("#review-list .review-item button.primary").first.click()
+            _wait(lambda: frame.locator("#review-list .review-item").count() == 1)
+            frame.locator("#review-list .review-item button.primary").first.click()
+            _wait(lambda: "Alpha check gamma" in _frame_text(frame))
+
+            # Save persists the accepted proposal to the host.
+            frame.locator("#btn-save").click()
+            _wait(lambda: "Alpha check gamma" in _host_text(servers, seed))
         finally:
             ctx.close()
             browser.close()

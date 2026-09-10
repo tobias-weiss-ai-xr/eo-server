@@ -1145,7 +1145,7 @@
     lastFocusedEl = null;
     el.focus();
   }
-  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog"];
+  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog"];
   function getOpenDialog() {
     for (let i = 0; i < DIALOG_IDS.length; i++) {
       const d = document.getElementById(DIALOG_IDS[i]);
@@ -2723,6 +2723,56 @@
   // AI tab surface reuses the File-menu AI review
   const btnAIReviewTab = document.getElementById("btn-ai-review-tab");
   if (btnAIReviewTab) btnAIReviewTab.addEventListener("click", openAIReview);
+  // AI propose: instruction -> /ai/propose (server-side model registry;
+  // the server itself never calls a vendor). Applied proposals arrive via
+  // the collab poll as agent ops and are projected as tracked-change spans
+  // (see pollCollab / applyTrackedDiff), so they surface in the existing
+  // review-changes flow for per-change accept/reject.
+  const aiProposeDialog = document.getElementById("ai-propose-dialog");
+  const aiProposeInstruction = document.getElementById("ai-propose-instruction");
+  const aiProposeError = document.getElementById("ai-propose-error");
+  function openAiPropose(instruction) {
+    closeAllMenus();
+    if (aiProposeError) aiProposeError.textContent = "";
+    // Selection-scoped proposals: the picked text rides along in the task
+    // so the model edits that span instead of the whole document.
+    let task = instruction || "";
+    const sel = String(getSelection() || "").trim();
+    if (sel) task += "\n\nSelected text:\n" + sel.slice(0, 500);
+    if (aiProposeInstruction) aiProposeInstruction.value = task;
+    if (aiProposeDialog) {
+      rememberFocus();
+      aiProposeDialog.classList.add("open");
+    }
+    if (aiProposeInstruction) aiProposeInstruction.focus();
+  }
+  async function runAiPropose() {
+    if (!aiProposeDialog) return;
+    const instruction = (aiProposeInstruction && aiProposeInstruction.value || "").trim();
+    if (!instruction) return;
+    if (aiProposeError) aiProposeError.textContent = "";
+    try {
+      const res = await fetch(api("ai/propose"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: instruction, model: "default" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "propose failed");
+      aiProposeDialog.classList.remove("open");
+      setStatus(t("AI.Propose.Applied"));
+    } catch (err) {
+      if (aiProposeError) aiProposeError.textContent = String(err.message || err);
+    }
+  }
+  const btnAiGrammar = document.getElementById("btn-ai-grammar");
+  if (btnAiGrammar) btnAiGrammar.addEventListener("click", () => openAiPropose("Fix grammar and spelling in the document."));
+  const btnAiAssistant = document.getElementById("btn-ai-assistant");
+  if (btnAiAssistant) btnAiAssistant.addEventListener("click", () => openAiPropose("Improve the writing style of the document."));
+  const btnAiProposeRun = document.getElementById("btn-ai-propose-run");
+  if (btnAiProposeRun) btnAiProposeRun.addEventListener("click", runAiPropose);
+  const btnAiProposeCancel = document.getElementById("btn-ai-propose-cancel");
+  if (btnAiProposeCancel) btnAiProposeCancel.addEventListener("click", () => { if (aiProposeDialog) aiProposeDialog.classList.remove("open"); restoreFocus(); });
   // View tab: reuse the statusbar/home controls (single source of truth)
   const viewFullscreen = document.getElementById("btn-view-fullscreen");
   if (viewFullscreen) viewFullscreen.addEventListener("click", () => document.getElementById("btn-fullscreen")?.click());
@@ -3519,6 +3569,10 @@
   const CLIENT_ID = "c-" + Math.random().toString(36).slice(2, 10);
   const COLLAB_ENABLED = window.__COLLAB__ !== false;
   let collabTimer = null;
+  // Last server text this editor agreed with + op-log length at that point
+  // (pollCollab uses them to decide which state deltas are agent edits).
+  let lastServerText = null;
+  let lastSeenOpCount = -1;
   let pendingRemoteText = null;
   let syncPill = null;
   let lastLocalEdit = 0; // timestamp of the user's last keystroke
@@ -3652,6 +3706,82 @@
 
   // --- plain-text helpers (collab is character-CRDT on plain text) -
   function editorPlainText() { return editor.innerText || ""; }
+  // Collab text = visible text minus tracked deletions (they stay in the DOM
+  // as redlines but are logically deleted; shipping them back through the
+  // plain-text CRDT would resurrect them server-side). Un-tracked documents
+  // return innerText unchanged (byte-identical to the pre-track behavior).
+  // ponytail: first-occurrence subtraction — a del span whose exact text also
+  // appears earlier in the doc subtracts the wrong copy; switch to offset
+  // arithmetic if that ever matters.
+  function collabText() {
+    const text = editor.innerText || "";
+    const dels = editor.querySelectorAll("del.track-delete");
+    if (!dels.length) return text;
+    let out = text;
+    for (const d of dels) {
+      const t = d.innerText || d.textContent || "";
+      if (t) out = out.replace(t, "");
+    }
+    return out;
+  }
+  // Map logical text offsets (tracked-deletion content excluded) to a DOM
+  // Range inside the editor. Returns a collapsed range for start === end.
+  function logicalRange(start, end) {
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        const p = n.parentElement;
+        return p && p.closest("del.track-delete") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    let pos = 0, startNode = null, startOff = 0, endNode = null, endOff = 0;
+    while (walker.nextNode()) {
+      const len = walker.currentNode.data.length;
+      if (!startNode && pos + len >= start) { startNode = walker.currentNode; startOff = start - pos; }
+      if (startNode && pos + len >= end) { endNode = walker.currentNode; endOff = end - pos; break; }
+      pos += len;
+    }
+    if (!startNode) return null;
+    const r = document.createRange();
+    if (!endNode) { r.setStart(startNode, Math.min(startOff, startNode.data.length)); r.collapse(true); return r; }
+    r.setStart(startNode, startOff);
+    r.setEnd(endNode, endOff);
+    return r;
+  }
+  // Project one server-side agent edit (a prefix/suffix diff between the
+  // previously-agreed text and the converged CRDT text) as tracked changes:
+  // deletions wrap in del.track-delete, insertions land as ins.track-insert.
+  // Returns false (caller falls back to plain convergence) when the range
+  // arithmetic cannot represent the diff.
+  function applyTrackedDiff(base, next) {
+    let i = 0;
+    const maxI = Math.min(base.length, next.length);
+    while (i < maxI && base[i] === next[i]) i++;
+    let j = 0;
+    while (j < base.length - i && j < next.length - i && base[base.length - 1 - j] === next[next.length - 1 - j]) j++;
+    const delLen = base.length - j - i;
+    const insText = next.slice(i, next.length - j);
+    try {
+      if (delLen > 0) {
+        const r = logicalRange(i, i + delLen);
+        if (!r) return false;
+        wrapRangeInDel(r);
+      }
+      if (insText) {
+        const r = logicalRange(i, i);
+        if (!r) return false;
+        const node = document.createElement("ins");
+        node.className = "track-insert";
+        node.setAttribute("data-author", "AI");
+        node.textContent = insText;
+        r.insertNode(node);
+      }
+    } catch (e) { return false; }
+    // Proposals surface in the existing review-changes flow (accept/reject
+    // per change) — the same spans a human tracked edit produces.
+    openReviewPanel();
+    afterTrackEdit();
+    return true;
+  }
   // Live word/character count for the status bar. Words are whitespace-
   // delimited runs; CJK/ligatures are approximated by character count too.
   function updateCounts() {
@@ -3700,9 +3830,12 @@
     });
     document.body.appendChild(syncPill);
   }
+  // Returns true when the editor now reflects `text` (applied or already
+  // equal), false when the update was deferred (open dialog / active typist)
+  // so the caller can retry on a later poll instead of treating it as done.
   function applyRemoteText(text) {
     const current = editorPlainText();
-    if (current === text) return;
+    if (current === text) return true;
     // The collab layer is a plain-text CRDT: tables, images, links and
     // formatting spans cannot be represented, and their contribution to the
     // plain-text projection is (nearly) all whitespace. Without this guard,
@@ -3712,10 +3845,10 @@
     // so structural content is never destroyed; genuine character edits
     // still differ and converge normally.
     const norm = (s) => (s || "").replace(/\s+/g, " ").trim();
-    if (norm(current) === norm(text)) return;
+    if (norm(current) === norm(text)) return true;
     // Never clobber an open modal (find/table/image dialog): leave the editor
     // untouched and converge on the next tick after the dialog closes.
-    if (getOpenDialog()) return;
+    if (getOpenDialog()) return false;
     // Never clobber a user who is actively typing. Once they go idle (even if
     // the editor stays focused) remote edits converge automatically. Focus
     // inside a child (e.g. an inserted page header/footer) counts too —
@@ -3726,7 +3859,7 @@
     if (activelyTyping) {
       pendingRemoteText = text;
       showSyncPill();
-      return;
+      return false;
     }
     const wasFocused = document.activeElement === editor;
     const offset = caretOffset(editor);
@@ -3738,11 +3871,12 @@
     }
     captureHistory();
     updateUndoRedoState();
+    return true;
   }
   // --- collab sync (debounced) -------------------------------------
   function collabSync() {
     if (!COLLAB_ENABLED) return;
-    const text = editorPlainText();
+    const text = collabText();
     fetch(api("collab/sync"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -3789,7 +3923,28 @@
     try {
       const res = await fetch(api("collab/state"));
       const data = await res.json();
-      if (data && typeof data.text === "string") applyRemoteText(data.text);
+      if (data && typeof data.text === "string") {
+        // Agent edits (site agent=*) converge as tracked-change spans so the
+        // human reviews them in the review-changes flow; human remote edits
+        // converge plainly (existing applyRemoteText semantics).
+        if (lastServerText === null) lastServerText = collabText();
+        if (data.text !== lastServerText) {
+          const ops = Array.isArray(data.ops) ? data.ops : [];
+          const newOps = lastSeenOpCount < 0 ? [] : ops.slice(Math.max(0, lastSeenOpCount));
+          const agentEdits = newOps.some((op) => op && typeof op.s === "string" && op.s.indexOf("agent=") === 0);
+          if (agentEdits && !getOpenDialog()) {
+            if (applyTrackedDiff(lastServerText, data.text)) lastServerText = data.text;
+            // false: fall through to plain convergence on the next tick
+          } else if (applyRemoteText(data.text)) {
+            // only mark the text as agreed when it actually applied; a
+            // deferred update (open dialog / active typist) must retry on
+            // the next poll or remote edits would hang behind the sync pill
+            lastServerText = data.text;
+          }
+        }
+        const opsAll = Array.isArray(data.ops) ? data.ops : [];
+        lastSeenOpCount = opsAll.length;
+      }
       // Presence is refreshed from the polled state (the browser uses polling
       // rather than the SSE stream, so peer join/leave must be re-read here).
       if (data && Array.isArray(data.clients)) renderPresence(data.clients);

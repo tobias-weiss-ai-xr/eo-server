@@ -486,8 +486,8 @@
     <button type="button" data-stub="ai.summarize" data-i18n="AI.Summarize">Summarize</button>
     <button type="button" data-stub="ai.translate" data-i18n="AI.Translate">Translate</button>
     <button type="button" data-stub="ai.rewrite" data-i18n="AI.Rewrite">Rewrite</button>
-    <button type="button" data-stub="ai.grammar" data-i18n="AI.Grammar">Grammar</button>
-    <button type="button" data-stub="ai.assistant" data-i18n="AI.Assistant">AI assistant</button>
+    <button type="button" id="btn-ai-grammar" data-i18n="AI.Grammar">Grammar</button>
+    <button type="button" id="btn-ai-assistant" data-i18n="AI.Assistant">AI assistant</button>
     </div>
     <div class="ribbon-page" data-tab="header-footer" role="group" aria-label="Header and Footer ribbon" data-i18n-aria-label="Tab.HeaderFooter">
     <button id="btn-hf-close" type="button" data-i18n="HF.Close">Close Header &amp; Footer</button>
@@ -875,6 +875,23 @@
       <div class="dialog-actions">
         <button id="btn-ai-reject-all">Reject all</button>
         <button id="btn-ai-review-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI propose dialog: instruction -> server-side model registry; edits
+       land in the CRDT as agent ops and converge here as tracked changes. -->
+  <div id="ai-propose-dialog" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="ai-propose-title">
+    <div class="dialog">
+      <h3 id="ai-propose-title">AI propose</h3>
+      <div class="dialog-field">
+        <label for="ai-propose-instruction">Instruction</label>
+        <textarea id="ai-propose-instruction" rows="3" placeholder="e.g. Fix grammar and spelling"></textarea>
+      </div>
+      <div id="ai-propose-error" class="version-error" role="alert"></div>
+      <div class="dialog-actions">
+        <button id="btn-ai-propose-cancel">Cancel</button>
+        <button id="btn-ai-propose-run" class="primary">Propose</button>
       </div>
     </div>
   </div>
