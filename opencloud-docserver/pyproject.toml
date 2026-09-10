@@ -29,6 +29,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 markers = [
     "integration: shells out to external tools (e.g. LibreOffice headless)",
+    "flaky(reason, reruns=N): known environment flake — e2e conftest tags\n        browser tests dynamically; reruns need pytest-rerunfailures",
 ]
 
 [tool.ruff]
