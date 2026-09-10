@@ -288,6 +288,19 @@
         <li role="none"><button type="button" role="menuitem" data-cmd="allCaps" data-i18n="Toolbar.AllCaps">All caps</button></li>
       </ul>
     </span>
+    <span class="menu rb-menu" style="--rb-x: 548px">
+      <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="More formatting" data-i18n-aria-label="Home.MoreFormatting">▾</button>
+      <ul class="menu-list" role="menu" hidden>
+        <li role="none"><button type="button" role="menuitem" data-stub="home.highlight" data-i18n="Home.Highlight">Highlight color</button></li>
+        <li role="none"><button type="button" role="menuitem" data-stub="home.fontcolor" data-i18n="Home.FontColor">Font color</button></li>
+        <li role="none"><button type="button" role="menuitem" data-stub="home.shading" data-i18n="Home.Shading">Shading</button></li>
+        <li role="none"><button type="button" role="menuitem" data-stub="home.borders" data-i18n="Home.Borders">Borders</button></li>
+        <li role="none"><button type="button" role="menuitem" data-stub="home.change-case" data-i18n="Home.ChangeCase">Change case</button></li>
+        <li role="none"><button type="button" role="menuitem" data-stub="home.multilevel" data-i18n="Home.Multilevel">Multilevel list</button></li>
+        <li role="none"><button type="button" role="menuitem" data-stub="home.font-dec" data-i18n="Home.FontDec">Decrease font</button></li>
+        <li role="none"><button type="button" role="menuitem" data-stub="home.font-inc" data-i18n="Home.FontInc">Increase font</button></li>
+      </ul>
+    </span>
     <!-- OO-golden sup/sub: one stacked split-button (two ink lines) + case/direction carets -->
     <button class="rb ss-stack" data-cmd="superscript" style="--rb-x: 488px" title="Superscript / Subscript" data-i18n-title="Toolbar.SuperscriptTitle" aria-label="Superscript" data-i18n-aria-label="Toolbar.Superscript" aria-pressed="false"><span aria-hidden="true">x&sup2;</span><span aria-hidden="true">x₂</span></button>
     <span class="menu rb-menu" style="--rb-x: 508px">
@@ -398,6 +411,12 @@
 <button id="btn-pagenumber" title="Insert page number field" data-i18n-title="Toolbar.PageNumberTitle" aria-label="Insert page number">#</button>
 <button id="btn-header" title="Insert page header" data-i18n-title="Toolbar.HeaderTitle" aria-label="Insert page header">▔</button>
 <button id="btn-footer" title="Insert page footer" data-i18n-title="Toolbar.FooterTitle" aria-label="Insert page footer">▁</button>
+    <button type="button" data-stub="insert.shape" data-i18n="Insert.Shape">Shape</button>
+    <button type="button" data-stub="insert.chart" data-i18n="Insert.Chart">Chart</button>
+    <button type="button" data-stub="insert.textart" data-i18n="Insert.TextArt">Text art</button>
+    <button type="button" data-stub="insert.dropcap" data-i18n="Insert.DropCap">Drop cap</button>
+    <button type="button" data-stub="insert.textbox" data-i18n="Insert.TextBox">Text box</button>
+    <button type="button" data-stub="insert.hyperlink" data-i18n="Insert.Hyperlink">Hyperlink</button>
     </div>
     <!-- OO-parity tab pages. Buttons for features WO lacks carry data-stub="<ref>":
          they are LOUD stubs — clicking reports the ref via setStatus — and the
@@ -409,6 +428,7 @@
     <button type="button" data-stub="draw.highlighter" data-i18n="Draw.Highlighter">Highlighter</button>
     <button type="button" data-stub="draw.eraser" data-i18n="Draw.Eraser">Eraser</button>
     <button type="button" data-stub="draw.ink" data-i18n="Draw.Ink">Ink color</button>
+    <button type="button" data-stub="draw.ink-thickness" data-i18n="Draw.InkThickness">Ink thickness</button>
     </div>
     <div class="ribbon-page" data-tab="layout" role="group" aria-label="Layout ribbon">
     <button id="btn-page-break" title="Insert page break" aria-label="Insert page break">⏎</button>
@@ -429,6 +449,7 @@
     <button type="button" data-stub="ref.citation" data-i18n="Ref.Citation">Citation</button>
     <button type="button" data-stub="ref.index" data-i18n="Ref.Index">Index</button>
     <button type="button" data-stub="ref.update-toc" data-i18n="Ref.UpdateToc">Update TOC</button>
+    <button type="button" data-stub="ref.crossref" data-i18n="Ref.Crossref">Cross-reference</button>
     </div>
     <div class="ribbon-page" data-tab="collaboration" role="group" aria-label="Collaboration ribbon" data-i18n-aria-label="Tab.Collaboration">
     <button id="btn-track-changes" title="Track changes" aria-label="Track changes" aria-pressed="false">✎</button>
@@ -457,12 +478,16 @@
     <div class="ribbon-page" data-tab="plugins" role="group" aria-label="Plugins ribbon" data-i18n-aria-label="Tab.Plugins">
     <button type="button" data-stub="plugins.browse" data-i18n="Plugins.Browse">Browse plugins</button>
     <button type="button" data-stub="plugins.manage" data-i18n="Plugins.Manage">Manage plugins</button>
+    <button type="button" data-stub="plugins.ocr" data-i18n="Plugins.Ocr">OCR</button>
+    <button type="button" data-stub="plugins.photoeditor" data-i18n="Plugins.PhotoEditor">Photo editor</button>
     </div>
     <div class="ribbon-page" data-tab="ai" role="group" aria-label="AI ribbon" data-i18n-aria-label="Tab.AI">
     <button id="btn-ai-review-tab" type="button" data-i18n="AI.ChangesTab">AI changes</button>
     <button type="button" data-stub="ai.summarize" data-i18n="AI.Summarize">Summarize</button>
     <button type="button" data-stub="ai.translate" data-i18n="AI.Translate">Translate</button>
     <button type="button" data-stub="ai.rewrite" data-i18n="AI.Rewrite">Rewrite</button>
+    <button type="button" data-stub="ai.grammar" data-i18n="AI.Grammar">Grammar</button>
+    <button type="button" data-stub="ai.assistant" data-i18n="AI.Assistant">AI assistant</button>
     </div>
     <div class="ribbon-page" data-tab="header-footer" role="group" aria-label="Header and Footer ribbon" data-i18n-aria-label="Tab.HeaderFooter">
     <button id="btn-hf-close" type="button" data-i18n="HF.Close">Close Header &amp; Footer</button>
@@ -472,6 +497,7 @@
     <button type="button" data-stub="hf.odd-even" data-i18n="HF.OddEven">Different Odd &amp; Even</button>
     <button type="button" data-stub="hf.header-from-top" data-i18n="HF.HeaderFromTop">Header from Top</button>
     <button type="button" data-stub="hf.footer-from-bottom" data-i18n="HF.FooterFromBottom">Footer from Bottom</button>
+    <button type="button" data-stub="hf.same-as-prev" data-i18n="HF.SameAsPrev">Same as previous</button>
     </div>
   </header>
 
