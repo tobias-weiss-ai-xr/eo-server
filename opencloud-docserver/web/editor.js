@@ -2720,6 +2720,35 @@
 
   const btnAIReview = document.getElementById("btn-ai-review");
   if (btnAIReview) btnAIReview.addEventListener("click", () => { closeAllMenus(); openAIReview(); });
+  // AI tab surface reuses the File-menu AI review
+  const btnAIReviewTab = document.getElementById("btn-ai-review-tab");
+  if (btnAIReviewTab) btnAIReviewTab.addEventListener("click", openAIReview);
+  // View tab: reuse the statusbar/home controls (single source of truth)
+  const viewFullscreen = document.getElementById("btn-view-fullscreen");
+  if (viewFullscreen) viewFullscreen.addEventListener("click", () => document.getElementById("btn-fullscreen")?.click());
+  const viewTheme = document.getElementById("btn-view-theme");
+  if (viewTheme) viewTheme.addEventListener("click", () => document.getElementById("btn-theme")?.click());
+  const viewFit = document.getElementById("btn-view-fit");
+  if (viewFit) viewFit.addEventListener("click", () => document.getElementById("btn-zoom-fit")?.click());
+  // View tab ruler toggle: hide/show the horizontal ruler
+  const rulerToggle = document.getElementById("btn-ruler-toggle");
+  if (rulerToggle) rulerToggle.addEventListener("click", () => {
+    const ruler = document.querySelector(".ruler");
+    if (!ruler) return;
+    const hidden = ruler.style.display === "none";
+    ruler.style.display = hidden ? "" : "none";
+    rulerToggle.setAttribute("aria-pressed", String(hidden));
+  });
+  // --- OO-parity stubs (documented iteration backlog) --------------------
+  // Controls for OO features WO has not implemented carry data-stub="<ref>"
+  // in index.html. Clicking reports the ref loudly via setStatus — nothing
+  // is a silent no-op. Grep data-stub in index.html to promote a stub to a
+  // real feature (id + handler + remove the attribute).
+  document.querySelectorAll("button[data-stub]").forEach((b) => {
+    b.addEventListener("click", () => {
+      setStatus((b.dataset.stub || "feature") + ": " + t("Stub.NotImplemented"), true);
+    });
+  });
   const btnAIReviewClose = document.getElementById("btn-ai-review-close");
   if (btnAIReviewClose) btnAIReviewClose.addEventListener("click", closeAIReview);
   const btnAIRejectAll = document.getElementById("btn-ai-reject-all");

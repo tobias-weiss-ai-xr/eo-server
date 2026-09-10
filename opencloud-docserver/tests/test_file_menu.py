@@ -153,3 +153,47 @@ def test_note_pagefield_headerfooter_authoring_buttons():
     assert ':scope > ' in js and 'page-header' in js and 'page-footer' in js
     for key in ["Toolbar.FootnoteTitle", "Toolbar.EndnoteTitle", "Toolbar.PageNumberTitle", "Toolbar.HeaderTitle", "Toolbar.FooterTitle"]:
         assert key in i18n, f"missing i18n key {key}"
+
+
+def test_oo_tab_strip_matches_golden():
+    """The tab strip mirrors OO's build: same tabs, same order, same golden
+    label centers (--qa-x). Review is gone — OO covers it with Collaboration."""
+    for tab, x in [("home", "92"), ("insert", "150"), ("draw", "205"),
+                   ("layout", "264"), ("references", "340"),
+                   ("collaboration", "436"), ("protection", "528"),
+                   ("view", "594"), ("plugins", "654"), ("ai", "705")]:
+        assert f'data-tab="{tab}"' in HTML, f"missing tab {tab}"
+        assert f'--qa-x: {x}px' in HTML, f"tab {tab} not at golden center {x}"
+
+
+def test_real_features_live_on_oo_tabs():
+    """Moved features: TOC/footnote/endnote on References, review controls on
+    Collaboration — same element ids (tests and commands are the contract)."""
+    refs = HTML.split('class="ribbon-page" data-tab="references"')[1].split("</div>")[0]
+    for el in ["btn-toc", "btn-footnote", "btn-endnote"]:
+        assert f'id="{el}"' in refs, f"{el} must be on the References tab"
+    collab = HTML.split('class="ribbon-page" data-tab="collaboration"')[1].split("</div>")[0]
+    for el in ["btn-track-changes", "btn-review-changes", "btn-comment", "btn-comments"]:
+        assert f'id="{el}"' in collab, f"{el} must be on the Collaboration tab"
+    assert 'data-tab="review"' not in HTML, "Review tab dissolved into Collaboration"
+
+
+def test_stub_buttons_are_loud_and_documented():
+    """Every OO-parity stub carries data-stub="<ref>" and the generic handler
+    reports it via setStatus — no silent no-op buttons. The refs ARE the
+    iteration backlog; promoting one = id + handler + drop the attribute."""
+    import re
+    stubs = re.findall(r'data-stub="([^"]+)"', HTML)
+    assert len(stubs) >= 25, "expected the full stub registry"
+    assert len(stubs) == len(set(stubs)), "duplicate stub ref"
+    assert 'button[data-stub]' in JS, "generic stub handler missing"
+    assert "setStatus" in JS
+    assert '"Stub.NotImplemented"' in I18N
+
+
+def test_view_tab_real_controls_wired():
+    """View tab reuses the single-source toggles + adds a real ruler toggle."""
+    for el in ["btn-ruler-toggle", "btn-view-fullscreen", "btn-view-theme", "btn-view-fit", "btn-ai-review-tab"]:
+        assert f'id="{el}"' in HTML
+        assert f'"{el}"' in JS, f"{el} not wired in editor.js"
+    assert '.querySelector(".ruler")' in JS

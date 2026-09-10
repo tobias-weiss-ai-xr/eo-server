@@ -159,8 +159,14 @@
          .ribbon-tab pipeline as before the titlebar move. -->
     <button type="button" class="ribbon-tab" data-tab="home" role="tab" aria-selected="true" style="--qa-x: 92px" data-i18n="Tab.Home">Home</button>
     <button type="button" class="ribbon-tab" data-tab="insert" role="tab" aria-selected="false" style="--qa-x: 150px" data-i18n="Tab.Insert">Insert</button>
-    <button type="button" class="ribbon-tab" data-tab="layout" role="tab" aria-selected="false" style="--qa-x: 206px" data-i18n="Tab.Layout">Layout</button>
-    <button type="button" class="ribbon-tab" data-tab="review" role="tab" aria-selected="false" style="--qa-x: 264px" data-i18n="Tab.Review">Review</button>
+    <button type="button" class="ribbon-tab" data-tab="draw" role="tab" aria-selected="false" style="--qa-x: 205px" data-i18n="Tab.Draw">Draw</button>
+    <button type="button" class="ribbon-tab" data-tab="layout" role="tab" aria-selected="false" style="--qa-x: 264px" data-i18n="Tab.Layout">Layout</button>
+    <button type="button" class="ribbon-tab" data-tab="references" role="tab" aria-selected="false" style="--qa-x: 340px" data-i18n="Tab.References">References</button>
+    <button type="button" class="ribbon-tab" data-tab="collaboration" role="tab" aria-selected="false" style="--qa-x: 436px" data-i18n="Tab.Collaboration">Collaboration</button>
+    <button type="button" class="ribbon-tab" data-tab="protection" role="tab" aria-selected="false" style="--qa-x: 528px" data-i18n="Tab.Protection">Protection</button>
+    <button type="button" class="ribbon-tab" data-tab="view" role="tab" aria-selected="false" style="--qa-x: 594px" data-i18n="Tab.View">View</button>
+    <button type="button" class="ribbon-tab" data-tab="plugins" role="tab" aria-selected="false" style="--qa-x: 654px" data-i18n="Tab.Plugins">Plugins</button>
+    <button type="button" class="ribbon-tab" data-tab="ai" role="tab" aria-selected="false" style="--qa-x: 705px" data-i18n="Tab.AI">AI</button>
     <!-- Quick-format cluster (OO-golden positions): text-labeled command
          duplicates of the ribbon controls — same data-cmd pipeline. -->
     <button class="qa" data-cmd="underline" style="--qa-x: 436px" title="Underline (Ctrl+U)" data-i18n="Toolbar.Underline" aria-label="Underline" aria-pressed="false">Underline</button>
@@ -383,28 +389,79 @@
     <button id="btn-image" title="Insert image" data-i18n-title="Toolbar.InsertImageTitle" aria-label="Insert image" data-i18n-aria-label="Toolbar.InsertImageTitle"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><circle cx="5" cy="6" r="1.3"/><path d="M2.5 12.5 7 8l3 3 2-2 1.5 1.5"/></svg></button>
     <button id="btn-link" title="Insert link" aria-label="Insert link"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 9.5 9.5 6.5M5 11l-1.5 1.5a2.5 2.5 0 0 1-3.536-3.536L2.5 6.5M11 5l1.5-1.5a2.5 2.5 0 0 1 3.536 3.536L13.5 9.5" transform="translate(0.5 0)"/></svg></button>
     <button id="btn-hr" title="Insert horizontal rule" aria-label="Insert horizontal rule">─</button>
-<button id="btn-toc" title="Insert table of contents" aria-label="Insert table of contents">☰</button>
 <button id="btn-object" title="Insert object" aria-label="Insert object">▢</button>
 <button id="btn-bookmark" title="Insert bookmark" aria-label="Insert bookmark"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 1.5h9v13l-4.5-3.5-4.5 3.5z"/></svg></button>
 <button id="btn-crossref" title="Insert cross-reference" aria-label="Insert cross-reference"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 14V8a3 3 0 0 1 3-3h9M10.5 1.5 14 5l-3.5 3.5"/></svg></button>
 <button id="btn-symbol" title="Insert symbol" aria-label="Insert symbol">Ω</button>
 <button id="btn-datetime" title="Insert date" aria-label="Insert date"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="12" rx="1"/><path d="M1.5 6h13M5 1v3M11 1v3"/></svg></button>
-<button id="btn-footnote" title="Insert footnote" data-i18n-title="Toolbar.FootnoteTitle" aria-label="Insert footnote">¹</button>
-<button id="btn-endnote" title="Insert endnote" data-i18n-title="Toolbar.EndnoteTitle" aria-label="Insert endnote">ⁿ</button>
 <button id="btn-pagenumber" title="Insert page number field" data-i18n-title="Toolbar.PageNumberTitle" aria-label="Insert page number">#</button>
 <button id="btn-header" title="Insert page header" data-i18n-title="Toolbar.HeaderTitle" aria-label="Insert page header">▔</button>
 <button id="btn-footer" title="Insert page footer" data-i18n-title="Toolbar.FooterTitle" aria-label="Insert page footer">▁</button>
+    </div>
+    <!-- OO-parity tab pages. Buttons for features WO lacks carry data-stub="<ref>":
+         they are LOUD stubs — clicking reports the ref via setStatus — and the
+         full list is pinned by tests/test_file_menu.py. Turn any stub into a
+         real feature by giving it an id + a command handler. -->
+    <div class="ribbon-page" data-tab="draw" role="group" aria-label="Draw ribbon" data-i18n-aria-label="Tab.Draw">
+    <button type="button" data-stub="draw.select" data-i18n="Draw.Select">Select</button>
+    <button type="button" data-stub="draw.pen" data-i18n="Draw.Pen">Pen</button>
+    <button type="button" data-stub="draw.highlighter" data-i18n="Draw.Highlighter">Highlighter</button>
+    <button type="button" data-stub="draw.eraser" data-i18n="Draw.Eraser">Eraser</button>
+    <button type="button" data-stub="draw.ink" data-i18n="Draw.Ink">Ink color</button>
     </div>
     <div class="ribbon-page" data-tab="layout" role="group" aria-label="Layout ribbon">
     <button id="btn-page-break" title="Insert page break" aria-label="Insert page break">⏎</button>
     <button id="btn-section-break" title="Insert section break" aria-label="Insert section break">⇘</button>
     <button id="btn-columns" title="Insert columns" aria-label="Insert columns">▥</button>
+    <button type="button" data-stub="layout.margins" data-i18n="Layout.Margins">Margins</button>
+    <button type="button" data-stub="layout.orientation" data-i18n="Layout.Orientation">Orientation</button>
+    <button type="button" data-stub="layout.size" data-i18n="Layout.Size">Size</button>
+    <button type="button" data-stub="layout.hyphenation" data-i18n="Layout.Hyphenation">Hyphenation</button>
+    <button type="button" data-stub="layout.line-numbers" data-i18n="Layout.LineNumbers">Line numbers</button>
+    <button type="button" data-stub="layout.watermark" data-i18n="Layout.Watermark">Watermark</button>
     </div>
-    <div class="ribbon-page" data-tab="review" role="group" aria-label="Review ribbon">
+    <div class="ribbon-page" data-tab="references" role="group" aria-label="References ribbon" data-i18n-aria-label="Tab.References">
+    <button id="btn-toc" title="Insert table of contents" aria-label="Insert table of contents">☰</button>
+    <button id="btn-footnote" title="Insert footnote" data-i18n-title="Toolbar.FootnoteTitle" aria-label="Insert footnote">¹</button>
+    <button id="btn-endnote" title="Insert endnote" data-i18n-title="Toolbar.EndnoteTitle" aria-label="Insert endnote">ⁿ</button>
+    <button type="button" data-stub="ref.caption" data-i18n="Ref.Caption">Caption</button>
+    <button type="button" data-stub="ref.citation" data-i18n="Ref.Citation">Citation</button>
+    <button type="button" data-stub="ref.index" data-i18n="Ref.Index">Index</button>
+    <button type="button" data-stub="ref.update-toc" data-i18n="Ref.UpdateToc">Update TOC</button>
+    </div>
+    <div class="ribbon-page" data-tab="collaboration" role="group" aria-label="Collaboration ribbon" data-i18n-aria-label="Tab.Collaboration">
     <button id="btn-track-changes" title="Track changes" aria-label="Track changes" aria-pressed="false">✎</button>
     <button id="btn-review-changes" title="Review changes" aria-label="Review changes">✓</button>
     <button id="btn-comment" title="Add comment" aria-label="Add comment"><svg viewBox="0 0 18 14" width="16" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2h14v8h-7.5L5 13v-3H2z"/></svg></button>
     <button id="btn-comments" title="Show comments" aria-label="Show comments">◫</button>
+    <button type="button" data-stub="collab.chat" data-i18n="Collab.Chat">Chat</button>
+    <button type="button" data-stub="collab.compare" data-i18n="Collab.Compare">Compare</button>
+    <button type="button" data-stub="collab.display" data-i18n="Collab.Display">Display mode</button>
+    <button type="button" data-stub="collab.prev-change" data-i18n="Collab.PrevChange">◀ change</button>
+    <button type="button" data-stub="collab.next-change" data-i18n="Collab.NextChange">change ▶</button>
+    </div>
+    <div class="ribbon-page" data-tab="protection" role="group" aria-label="Protection ribbon" data-i18n-aria-label="Tab.Protection">
+    <button type="button" data-stub="protect.password" data-i18n="Prot.Password">Protect with password</button>
+    <button type="button" data-stub="protect.restrict" data-i18n="Prot.Restrict">Restrict editing</button>
+    </div>
+    <div class="ribbon-page" data-tab="view" role="group" aria-label="View ribbon" data-i18n-aria-label="Tab.View">
+    <button type="button" data-stub="view.mode" data-i18n="View.Mode">Document view</button>
+    <button id="btn-ruler-toggle" type="button" data-i18n="View.Ruler" aria-pressed="true">Ruler</button>
+    <button type="button" data-stub="view.gridlines" data-i18n="View.Gridlines">Gridlines</button>
+    <button type="button" data-stub="view.navigation" data-i18n="View.Navigation">Navigation</button>
+    <button id="btn-view-fullscreen" type="button" data-i18n="View.Fullscreen">Fullscreen</button>
+    <button id="btn-view-theme" type="button" data-i18n="View.Theme" aria-pressed="false">Theme</button>
+    <button id="btn-view-fit" type="button" data-i18n="View.Fit">Fit page</button>
+    </div>
+    <div class="ribbon-page" data-tab="plugins" role="group" aria-label="Plugins ribbon" data-i18n-aria-label="Tab.Plugins">
+    <button type="button" data-stub="plugins.browse" data-i18n="Plugins.Browse">Browse plugins</button>
+    <button type="button" data-stub="plugins.manage" data-i18n="Plugins.Manage">Manage plugins</button>
+    </div>
+    <div class="ribbon-page" data-tab="ai" role="group" aria-label="AI ribbon" data-i18n-aria-label="Tab.AI">
+    <button id="btn-ai-review-tab" type="button" data-i18n="AI.ChangesTab">AI changes</button>
+    <button type="button" data-stub="ai.summarize" data-i18n="AI.Summarize">Summarize</button>
+    <button type="button" data-stub="ai.translate" data-i18n="AI.Translate">Translate</button>
+    <button type="button" data-stub="ai.rewrite" data-i18n="AI.Rewrite">Rewrite</button>
     </div>
   </header>
 
