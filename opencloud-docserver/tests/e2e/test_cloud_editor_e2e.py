@@ -710,7 +710,7 @@ def test_inline_format_commands_code_caps_strike(servers):
               const sel = window.getSelection();
               sel.removeAllRanges(); sel.addRange(range);
             }""")
-            frame.locator("button[data-cmd='strikeThrough']").click()
+            frame.locator("button.rb[data-cmd='strikeThrough']").click()
 
             html = frame.evaluate("document.getElementById('editor').innerHTML")
             assert "Consolas" in html or "monospace" in html.lower(), html

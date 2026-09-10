@@ -721,6 +721,26 @@
     // the selection in (or unwrap it from) a CSS span. The converters map
     // monospace families to <code> and these CSS props to the same style
     // strings, so everything round-trips through DOCX and ODT.
+    // Underline/strike style variants wrap the selection in a span with a
+    // doubled text-decoration (round-trips as plain decoration, so DOCX/ODT
+    // downgrade gracefully to single).
+    if (cmd === "underlineDouble" || cmd === "strikeDouble") {
+      editor.focus();
+      toggleInlineCSS("textDecoration",
+        cmd === "underlineDouble" ? "underline double" : "line-through double");
+      updateActiveStates();
+      return;
+    }
+    // List-style-type restyles the list under the selection (bullet disc /
+    // circle / square, numbering decimal / alpha / roman). Creates the list
+    // first when the selection is not inside one. Style-only change: no
+    // input event fires, so the save/collab pipeline is armed explicitly.
+    if (cmd === "listStyle") {
+      editor.focus();
+      applyListStyle(value || "disc");
+      updateActiveStates();
+      return;
+    }
     if (cmd === "code" || cmd === "smallCaps" || cmd === "allCaps") {
       const applied = cmd === "code"
         ? toggleMonospace()
@@ -843,6 +863,30 @@
   // selection. The block gets `style="line-height: <n>;"`, which the server
   // sanitizer whitelist allows; picking "1.0" removes the property (single
   // spacing = the document default). Recorded as a single undoable step.
+  // Restyle (or create) the list containing the selection, then arm the
+  // save/collab pipeline — a style attribute change fires no input event.
+  function applyListStyle(type) {
+    if (READ_ONLY) return;
+    const ordered = ["decimal", "lower-alpha", "lower-roman", "upper-alpha"].includes(type);
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    let node = sel.anchorNode;
+    if (node && node.nodeType === 3) node = node.parentElement;
+    let list = node && node.closest ? node.closest("#editor ul, #editor ol") : null;
+    if (!list) {
+      try { document.execCommand(ordered ? "insertOrderedList" : "insertUnorderedList"); } catch (err) { return; }
+      node = sel.anchorNode;
+      if (node && node.nodeType === 3) node = node.parentElement;
+      list = node && node.closest ? node.closest("#editor ul, #editor ol") : null;
+      if (!list) return;
+    }
+    if (list.tagName === (ordered ? "OL" : "UL")) list.style.listStyleType = type;
+    markDirty();
+    captureHistory();
+    scheduleCollabSync();
+    notifyHost("editing");
+  }
+
   function applyLineHeight(value) {
     if (READ_ONLY) return;
     const sel = window.getSelection();
@@ -2914,6 +2958,10 @@
     const trig = holder.querySelector(".menu-trigger");
     const list = holder.querySelector(".menu-list");
     if (!trig || !list) return;
+    // Keep the editor's live selection active: without this, the mousedown
+    // moves focus off the contenteditable and the menu item's command runs
+    // on a collapsed (empty) selection.
+    trig.addEventListener("mousedown", (ev) => ev.preventDefault());
     trig.addEventListener("click", (ev) => {
       ev.stopPropagation();
       const willOpen = list.hidden;
