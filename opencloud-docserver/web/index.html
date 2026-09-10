@@ -25,43 +25,81 @@
     /* Find-and-replace dialog styles (scoped here; style.css is maintained
        separately). Wider dialog with a query row + step arrows, a
        match-case option, and the counter/status lines. */
-    .find-dialog { width: 380px; }
-    .find-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
+    /* Find panel — OO parity: floating top-right bar (234px wide, input
+       row 28px), the document stays interactive behind it. The overlay
+       keeps the .open show/hide mechanics and focus trap but does not
+       dim or block the page. */
+    #find-dialog {
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 150px 204px 0 0;
+      background: transparent;
+      pointer-events: none;
     }
-    .find-head h3 { margin: 0; }
-    .find-count {
-      font-size: 12px;
-      color: var(--muted);
-      font-variant-numeric: tabular-nums;
+    .find-dialog {
+      width: 234px;
+      pointer-events: auto;
+      padding: 8px;
+      border-radius: 4px;
     }
-    .find-count.no-match { color: #f87171; }
+    .find-title {
+      position: absolute;
+      width: 1px; height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
     .find-field-row {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
+      gap: 4px;
+      margin-bottom: 6px;
     }
-    .find-field-row .find-label {
-      font-size: 13px;
-      color: var(--muted);
+    .find-field-row input {
+      flex: 1;
+      width: auto;
+      height: 28px;
+      min-height: 28px;
+      padding: 0 6px;
+      font-size: 12px;
+    }
+    .find-arrow, .find-close {
+      width: 26px; min-width: 26px;
+      height: 28px;
+      padding: 0;
+      font-size: 10px;
+    }
+    .find-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+    .find-field-row button {
+      font-size: 11px;
+      padding: 4px 6px;
       flex: 0 0 auto;
     }
-    .find-field-row input { flex: 1; width: auto; }
-    .find-arrow { width: 34px; min-width: 34px; padding: 0; }
-    .find-options { margin: 4px 0 10px; }
     .find-check {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      font-size: 13px;
+      gap: 4px;
+      margin-left: 2px;
+      font-size: 11px;
       color: var(--muted);
       cursor: pointer;
     }
     .find-check input { width: auto; }
+    .find-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .find-count {
+      font-size: 11px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .find-count.no-match { color: #f87171; }
     .find-status {
       min-height: 16px;
       margin-bottom: 6px;
@@ -491,7 +529,7 @@
            title="Zoom" aria-label="Zoom level">
     </span>
     <button class="sb" id="btn-zoom-out" style="--sb-x: 1100px" title="Zoom out" aria-label="Zoom out" aria-keyshortcuts="Control+Minus"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5M4.5 7h5"/></svg></button>
-    <button class="sb" id="btn-zoom-in" class="sb sb-boxed" style="--sb-x: 1218px" title="Zoom in" aria-label="Zoom in" aria-keyshortcuts="Control+Plus"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5M4.5 7h5M7 4.5v5"/></svg></button>
+    <button class="sb sb-boxed" id="btn-zoom-in" style="--sb-x: 1218px" title="Zoom in" aria-label="Zoom in" aria-keyshortcuts="Control+Plus"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5M4.5 7h5M7 4.5v5"/></svg></button>
     <button class="sb" id="btn-zoom-fit" style="--sb-x: 1282px" title="Fit page width" aria-label="Fit page width">⤢</button>
     <button class="sb" id="btn-zoom-reset" style="--sb-x: 1349px" title="Reset zoom" aria-label="Reset zoom">100%</button>
     <!-- Document language (drives spellcheck + lang attr) and comment
@@ -756,42 +794,39 @@
     </div>
   </div>
 
-  <!-- Find-and-replace dialog: search the document, step through matches
-       (highlighted with the native selection — the DOM is never mutated for
-       highlighting) and replace single occurrences or all at once. Replace
-       controls are disabled in read-only documents; finding stays
-       available. Keyboard: Enter/Shift+Enter step next/previous, Ctrl+F
-       re-opens, Escape closes. -->
-  <div id="find-dialog" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="find-dialog-title">
+  <!-- Find-and-replace panel (OO parity): a floating top-right bar, not a
+       centered modal — the document stays interactive while it is open.
+       Search the document, step through matches (highlighted with the
+       native selection — the DOM is never mutated for highlighting) and
+       replace single occurrences or all at once. Replace controls are
+       disabled in read-only documents; finding stays available. Keyboard:
+       Enter/Shift+Enter step next/previous, Ctrl+F re-opens, Escape
+       closes. -->
+  <div id="find-dialog" class="dialog-overlay find-overlay" role="dialog" aria-labelledby="find-dialog-title">
     <div class="dialog find-dialog">
-      <div class="find-head">
-        <h3 id="find-dialog-title" data-i18n="Toolbar.Find">Find and replace</h3>
-        <span id="find-count" class="find-count" role="status">0 / 0</span>
-      </div>
+      <h3 id="find-dialog-title" class="find-title" data-i18n="Toolbar.Find">Find and replace</h3>
       <div class="find-field-row">
-        <label for="find-query" class="find-label" data-i18n="Find.SearchLabel">Find</label>
-        <input id="find-query" type="text" spellcheck="false"
+        <input id="find-query" type="text" spellcheck="false" aria-label="Find"
                placeholder="Search in document"
                data-i18n-placeholder="Find.SearchPlaceholder">
         <button id="btn-find-prev" class="find-arrow" title="Previous (Shift+Enter)" data-i18n-title="Find.Prev" aria-label="Previous match">▲</button>
         <button id="btn-find-next" class="find-arrow" title="Next (Enter)" data-i18n-title="Find.Next" aria-label="Next match">▼</button>
+        <button id="btn-find-close" class="find-close" title="Close" aria-label="Close find panel">✕</button>
       </div>
       <div class="find-field-row">
-        <label for="find-replace" class="find-label" data-i18n="Find.ReplaceLabel">Replace with</label>
-        <input id="find-replace" type="text" spellcheck="false">
+        <input id="find-replace" type="text" spellcheck="false" aria-label="Replace with"
+               placeholder="Replace with" data-i18n-placeholder="Find.ReplacePlaceholder">
+        <button id="btn-find-replace" data-i18n="Find.Replace">Replace</button>
+        <button id="btn-find-replace-all" class="primary" data-i18n="Find.ReplaceAll">Replace all</button>
       </div>
-      <div class="find-options">
+      <div class="find-meta-row">
         <label class="find-check">
           <input id="find-match-case" type="checkbox">
           <span data-i18n="Find.MatchCase">Match case</span>
         </label>
+        <span id="find-count" class="find-count" role="status">0 / 0</span>
       </div>
       <div id="find-status" class="find-status" role="status"></div>
-      <div class="dialog-actions">
-        <button id="btn-find-close" data-i18n="Find.Close">Close</button>
-        <button id="btn-find-replace" data-i18n="Find.Replace">Replace</button>
-        <button id="btn-find-replace-all" class="primary" data-i18n="Find.ReplaceAll">Replace all</button>
-      </div>
     </div>
   </div>
 

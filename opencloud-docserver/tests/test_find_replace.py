@@ -58,3 +58,24 @@ def test_shortcuts_hooks_presence():
     assert 'ev.altKey && /^[0-3]$/.test(ev.key)' in js
     # Lists (Ctrl+Shift+7/8)
     assert 'ev.code === "Digit7" || ev.code === "Digit8"' in js
+
+
+def test_find_panel_oo_anatomy():
+    """Find surface is an OO-style floating top-right panel, not a modal."""
+    html = client.get("/editor").text
+    assert 'class="dialog-overlay find-overlay"' in html, \
+        "find-dialog must carry the find-overlay panel class"
+    assert 'aria-modal="true"' not in html.split('id="find-dialog"')[1][:400], \
+        "find panel is non-modal (document stays interactive)"
+    assert 'find-title' in html  # visually hidden a11y title
+    assert 'btn-find-close' in html
+    css = ""
+    import re
+    m = re.search(r'<style>(.*?)</style>', html, re.S)
+    assert m, "inline style block missing"
+    css = m.group(1)
+    assert "pointer-events: none" in css and "#find-dialog" in css
+    assert "width: 234px" in css, "panel width must match OO's 234px"
+    assert "height: 28px" in css, "input row must match OO's 28px"
+    # old modal anatomy must be gone
+    assert "width: 380px" not in css
