@@ -1231,10 +1231,12 @@ button.active {
 
 .side-panel {
   position: fixed;
-  top: 0;
+  /* docked below the ruler band like OO's comments rail (starts at the
+     canvas, not over the titlebar/ribbon) and stops above the statusbar */
+  top: 140px;
+  bottom: 32px;
   right: 0;
   width: 320px;
-  height: 100%;
   background: #fff;
   border-left: 1px solid #ccc;
   box-shadow: -2px 0 8px rgba(0, 0, 0, .1);
