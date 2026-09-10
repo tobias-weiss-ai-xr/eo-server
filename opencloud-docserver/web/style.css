@@ -1175,6 +1175,23 @@ hr.section-break {
   border-top: 2px dashed #999;
   margin: 14px 0;
 }
+/* Note / page-field / header-footer markers (F-073/F-074/F-084/F-085): the
+   citation <sup> renders natively; the body spans and the PAGE field need
+   an editable visible shape. */
+.page-number::before {
+  content: "#";
+  color: #888;
+}
+.page-header, .page-footer {
+  border: 1px dashed #999;
+  padding: 2px 8px;
+  color: #555;
+  font-size: 13px;
+}
+.footnote, .endnote {
+  font-size: 0.85em;
+  color: #444;
+}
 section[data-columns] {
   outline: 1px dashed #4a90d9;
   outline-offset: 3px;

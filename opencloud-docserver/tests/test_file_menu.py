@@ -129,3 +129,27 @@ def test_context_menu_css_matches_oo_geometry():
     assert "position: fixed" in CSS
     assert "padding: 5px 14px 5px 38px" in CSS, "label column must sit at OO's +38px"
     assert "#ctx-menu[hidden] { display: none; }" in CSS
+
+
+def test_note_pagefield_headerfooter_authoring_buttons():
+    """F-073 F-074 F-084 F-085: authoring UI for the note / PAGE-field /
+    header-footer contracts the converters already round-trip. The buttons
+    must exist on the Insert page, wire to real commands, and emit the
+    exact HTML contracts the converter parses."""
+    html = HTML
+    js = JS
+    i18n = I18N
+    for el in ["btn-footnote", "btn-endnote", "btn-pagenumber", "btn-header", "btn-footer"]:
+        assert f'id="{el}"' in html, f"missing authoring button {el}"
+    for cmd in ["insertFootnote", "insertEndnote", "insertPageNumber", "insertHeader", "insertFooter"]:
+        assert f'"{cmd}"' in js, f"command {cmd} missing in editor.js"
+    # exact serialization contracts (converter.py / odt_converter.py):
+    # classes are built from the footnote/endnote ternary + '-citation'
+    assert '"footnote" : "endnote"' in js and '-citation">[1]</sup>' in js
+    assert 'class="page-number"' in js
+    assert 'page-header' in js and 'page-footer' in js
+    # header/footer: one per document, focused on re-press (selector built
+    # from tag + '.page-' + tag)
+    assert ':scope > ' in js and 'page-header' in js and 'page-footer' in js
+    for key in ["Toolbar.FootnoteTitle", "Toolbar.EndnoteTitle", "Toolbar.PageNumberTitle", "Toolbar.HeaderTitle", "Toolbar.FooterTitle"]:
+        assert key in i18n, f"missing i18n key {key}"

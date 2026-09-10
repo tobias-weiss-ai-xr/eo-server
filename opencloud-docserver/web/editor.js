@@ -797,6 +797,58 @@
       updateUndoRedoState();
       return;
     }
+    if (cmd === "insertFootnote" || cmd === "insertEndnote") {
+      // Note authoring (F-073/F-074): the HTML contract the converters
+      // round-trip — a citation <sup> immediately followed by the body
+      // <span> (see _InlineRunBuilder._start_note in converter.py). Inline
+      // insertion, so no trailing-paragraph block-boundary handling.
+      const cls = cmd === "insertFootnote" ? "footnote" : "endnote";
+      const body = cmd === "insertFootnote" ? "Footnote text" : "Endnote text";
+      const html = '<sup class="' + cls + '-citation">[1]</sup><span class="' + cls + '">' + body + '</span>';
+      try { document.execCommand("insertHTML", false, html); } catch (err) {}
+      markDirty();
+      captureHistory();
+      scheduleCollabSync();
+      notifyHost("editing");
+      updateActiveStates();
+      updateUndoRedoState();
+      return;
+    }
+    if (cmd === "insertPageNumber") {
+      // PAGE-field authoring (F-085): the span the converters map to
+      // w:fldSimple PAGE / text:page-number.
+      try { document.execCommand("insertHTML", false, '<span class="page-number"></span>'); } catch (err) {}
+      markDirty();
+      captureHistory();
+      scheduleCollabSync();
+      notifyHost("editing");
+      updateActiveStates();
+      updateUndoRedoState();
+      return;
+    }
+    if (cmd === "insertHeader" || cmd === "insertFooter") {
+      // Header/footer authoring (F-084): the converters parse a
+      // <header class="page-header"> at body start and a
+      // <footer class="page-footer"> at body end into real page parts.
+      // One of each per document; pressing again focuses the existing one.
+      const tag = cmd === "insertHeader" ? "header" : "footer";
+      const sel = tag + ".page-" + tag;
+      const existing = editor.querySelector(":scope > " + sel);
+      if (existing) { existing.focus(); return; }
+      const el = document.createElement(tag);
+      el.className = "page-" + tag;
+      el.textContent = cmd === "insertHeader" ? "Header text" : "Footer text";
+      if (cmd === "insertHeader") editor.insertBefore(el, editor.firstChild);
+      else editor.appendChild(el);
+      el.focus();
+      markDirty();
+      captureHistory();
+      scheduleCollabSync();
+      notifyHost("editing");
+      updateActiveStates();
+      updateUndoRedoState();
+      return;
+    }
     if (cmd === "insertSymbol" || cmd === "insertDate") {
       // Never let a symbol/date-land inside an <hr> or page-break marker
       // whose caret Chromium re-restored on focus.
@@ -2822,6 +2874,11 @@
   if (symbolBtn) symbolBtn.addEventListener("click", openSymbolDialog);
   const dtBtn = document.getElementById("btn-datetime");
   if (dtBtn) dtBtn.addEventListener("click", () => emitCommand("insertDate"));
+  // Note / page-field / header-footer authoring buttons (F-073/F-074/F-084/F-085)
+  for (const [id, cmd] of [["btn-footnote", "insertFootnote"], ["btn-endnote", "insertEndnote"], ["btn-pagenumber", "insertPageNumber"], ["btn-header", "insertHeader"], ["btn-footer", "insertFooter"]]) {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener("click", () => emitCommand(cmd));
+  }
   const symbolClose = document.getElementById("btn-symbol-close");
   if (symbolClose) symbolClose.addEventListener("click", () => {
     const d = document.getElementById("symbol-dialog");
