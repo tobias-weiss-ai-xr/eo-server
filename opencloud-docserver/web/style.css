@@ -1235,6 +1235,23 @@ section[data-columns] {
 .nav-panel-list .nav-empty { padding: 4px 8px; color: #888; font-style: italic; font-size: .9em; }
 @keyframes nav-flash { 0% { background: #ffe9a8; } 100% { background: transparent; } }
 .nav-flash { animation: nav-flash 1.4s ease; }
+
+/* Collaboration chat side panel — right-docked mirror of nav-panel. */
+#chat-panel {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 220px;
+  overflow-y: auto;
+  background: #f7f7fb;
+  border-left: 1px solid #ddd;
+  box-shadow: -2px 0 6px rgba(0,0,0,.08);
+  z-index: 40;
+  padding: 8px 4px;
+}
+#chat-panel .chat-panel-title { font-weight: 600; padding: 2px 8px 8px; color: #333; }
+#chat-panel .chat-panel-list { list-style: none; margin: 0; padding: 0; }
+#chat-panel .chat-panel-list li { padding: 4px 8px; border-radius: 4px; font-size: .92em; }
+#chat-panel .chat-panel-list .chat-empty { color: #888; font-style: italic; font-size: .9em; }
 nav.toc {
   border: 1px dashed #d99000;
   padding: 6px 10px;

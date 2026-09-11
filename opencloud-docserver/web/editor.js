@@ -941,6 +941,7 @@
     if (cmd === "link") { insertLink(); return; }
     if (cmd === "toggleGridlines") { toggleGridlines(); return; }
     if (cmd === "toggleNavigation") { toggleNavigation(); return; }
+    if (cmd === "toggleChat") { toggleChat(); return; }
     if (cmd === "insertCaption") { insertCaptionCommand(); return; }
     if (cmd === "compareVersion") { openCompareView(); return; }
     if (cmd === "toggleHyphenation") { toggleSectionMarker("hyphenation", "data-auto=\"1\""); return; }
@@ -3094,6 +3095,24 @@
     navPanel.hidden = !opening;
     if (btn) btn.setAttribute("aria-expanded", String(opening));
     setStatus(opening ? "Navigation open" : "Navigation closed");
+  }
+
+  // Collaboration chat panel (broadcasting via the collab ops channel).
+  const chatPanel = document.getElementById("chat-panel");
+  const chatList = chatPanel && chatPanel.querySelector(".chat-panel-list");
+  function toggleChat() {
+    if (!chatPanel) return;
+    const btn = document.getElementById("btn-chat-toggle");
+    const opening = chatPanel.hidden;
+    if (opening && chatList && !chatList.childElementCount) {
+      const li = document.createElement("li");
+      li.className = "chat-empty";
+      li.textContent = t("ChatPanel.Empty") || "No messages yet";
+      chatList.appendChild(li);
+    }
+    chatPanel.hidden = !opening;
+    if (btn) btn.setAttribute("aria-expanded", String(opening));
+    setStatus(opening ? t("Status.ChatOpen") || "Chat open" : t("Status.ChatClosed") || "Chat closed");
   }
 
   // Multilevel list: nest the current list item under its previous
