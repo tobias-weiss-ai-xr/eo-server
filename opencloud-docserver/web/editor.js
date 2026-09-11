@@ -970,6 +970,7 @@
     if (cmd === "toggleSameAsPrev") { toggleSameAsPrevCommand(); return; }
     if (cmd === "browsePlugins") { browsePlugins(); return; }
     if (cmd === "toggleInk") { toggleInk(value); return; }
+    if (cmd === "inkMode") { setInkMode(value); return; }
     if (cmd === "inkSelect") { inkSelect(); return; }
     if (cmd === "inkColor") { setInkColor(); return; }
     if (cmd === "inkThickness") { setInkThickness(); return; }
@@ -1160,6 +1161,12 @@
           const sel = window.getSelection();
           const blk = sel && sel.anchorNode ? blockElementAt(sel.anchorNode) : null;
           active = !!(blk && blk.style.direction === "rtl");
+        } else if (cmd === "toggleInk") {
+          // Ink tool buttons reflect the active tool (pen/highlighter/eraser).
+          active = inkMode === (btn.dataset.value || null);
+        } else if (cmd === "inkMode") {
+          // Draw master toggle is active while any ink tool is engaged.
+          active = !!inkMode;
         } else {
           active = cmd === "formatBlock"
             ? (btn.dataset.value || "P") === currentBlockTag()
@@ -3789,22 +3796,46 @@
     setStatus("Ink mode: off");
   }
 
-  function toggleInk(mode) {
+  // setInkMode: canonical ink-mode setter (Draw tab). A specific mode
+  // ("select"|"pen"|"highlighter"|"eraser") activates that tool; no
+  // argument toggles drawing on (pen) / off — the "Draw" master button.
+  // Pure set: re-selecting the active tool does not toggle off (toggleInk
+  // does that for the per-tool buttons). Drawing state is ephemeral (not
+  // persisted to DOCX) — view-only overlay like the navigation sidebar.
+  function setInkMode(mode) {
     if (!inkCanvas) {
       setStatus("Ink canvas not found", true);
       return;
     }
     initInkCanvas();
-    // Toggle off if already in the requested mode
-    if (inkMode === mode) { setInkModeOff(); return; }
-    // Switch mode
+    // No argument: master toggle (Draw button) — enter pen or turn off.
+    if (!mode) {
+      mode = inkMode ? null : "pen";
+    }
+    if (mode === null) {
+      setInkModeOff();
+      updateActiveStates();
+      return;
+    }
     inkMode = mode;
     selectedInk = -1;
     selectDrag = null;
     inkCanvas.hidden = false;
     inkCanvas.classList.add("drawing");
-    inkCanvas.style.cursor = "crosshair";
-    setStatus(`Ink mode: ${mode}`);
+    inkCanvas.style.cursor = (mode === "select") ? "default" : "crosshair";
+    setStatus("Ink mode: " + mode);
+    updateActiveStates();
+  }
+
+  // toggleInk: per-tool toggle for the tool buttons (pen/highlighter/
+  // eraser). Re-selecting the active tool turns ink off; otherwise sets the
+  // mode. Delegates to setInkMode so there is one canvas-state code path.
+  // (Kept as the data-cmd="toggleInk" handler so the per-tool buttons keep
+  // their toggle-off affordance.) The select tool uses its own inkSelect
+  // command (see below).
+  function toggleInk(mode) {
+    if (inkMode === mode) setInkMode(null);
+    else setInkMode(mode);
   }
 
   // Select tool (draw.select): strokes become pickable — click selects,

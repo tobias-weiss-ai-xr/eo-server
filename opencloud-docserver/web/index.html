@@ -435,10 +435,11 @@
          full list is pinned by tests/test_file_menu.py. Turn any stub into a
          real feature by giving it an id + a command handler. -->
     <div class="ribbon-page" data-tab="draw" role="group" aria-label="Draw ribbon" data-i18n-aria-label="Tab.Draw">
-    <button type="button" id="btn-ink-select" data-cmd="inkSelect" data-i18n="Draw.Select" title="Select" data-i18n-title="Draw.SelectTitle">Select</button>
-    <button type="button" id="btn-ink-pen" data-cmd="toggleInk" data-value="pen" data-i18n="Draw.Pen" title="Pen" data-i18n-title="Draw.PenTitle">Pen</button>
-    <button type="button" id="btn-ink-highlighter" data-cmd="toggleInk" data-value="highlighter" data-i18n="Draw.Highlighter" title="Highlighter" data-i18n-title="Draw.HighlighterTitle">Highlighter</button>
-    <button type="button" id="btn-ink-eraser" data-cmd="toggleInk" data-value="eraser" data-i18n="Draw.Eraser" title="Eraser" data-i18n-title="Draw.EraserTitle">Eraser</button>
+    <button type="button" id="btn-ink-draw" data-cmd="inkMode" data-i18n="Draw.Mode" title="Toggle drawing mode" data-i18n-title="Draw.ModeTitle" aria-pressed="false">Draw</button>
+    <button type="button" id="btn-ink-select" data-cmd="inkSelect" data-i18n="Draw.Select" title="Select" data-i18n-title="Draw.SelectTitle" aria-pressed="false">Select</button>
+    <button type="button" id="btn-ink-pen" data-cmd="toggleInk" data-value="pen" data-i18n="Draw.Pen" title="Pen" data-i18n-title="Draw.PenTitle" aria-pressed="false">Pen</button>
+    <button type="button" id="btn-ink-highlighter" data-cmd="toggleInk" data-value="highlighter" data-i18n="Draw.Highlighter" title="Highlighter" data-i18n-title="Draw.HighlighterTitle" aria-pressed="false">Highlighter</button>
+    <button type="button" id="btn-ink-eraser" data-cmd="toggleInk" data-value="eraser" data-i18n="Draw.Eraser" title="Eraser" data-i18n-title="Draw.EraserTitle" aria-pressed="false">Eraser</button>
     <button type="button" id="btn-ink-color" data-cmd="inkColor" data-i18n="Draw.Ink" title="Ink color" data-i18n-title="Draw.InkTitle">Ink color</button>
     <button type="button" id="btn-ink-thickness" data-cmd="inkThickness" data-i18n="Draw.InkThickness" title="Ink thickness" data-i18n-title="Draw.InkThicknessTitle">Ink thickness</button>
     </div>
