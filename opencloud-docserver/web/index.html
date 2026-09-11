@@ -468,8 +468,8 @@
     <button type="button" data-stub="collab.next-change" data-i18n="Collab.NextChange">change ▶</button>
     </div>
     <div class="ribbon-page" data-tab="protection" role="group" aria-label="Protection ribbon" data-i18n-aria-label="Tab.Protection">
-    <button type="button" data-stub="protect.password" data-i18n="Prot.Password">Protect with password</button>
-    <button type="button" data-stub="protect.restrict" data-i18n="Prot.Restrict">Restrict editing</button>
+    <button type="button" data-cmd="protectDialog" data-i18n="Prot.Password">Protect with password</button>
+    <button type="button" data-cmd="restrictEditing" data-i18n="Prot.Restrict">Restrict editing</button>
     </div>
     <div class="ribbon-page" data-tab="view" role="group" aria-label="View ribbon" data-i18n-aria-label="Tab.View">
     <button type="button" data-cmd="displayMode" data-i18n="View.Mode">Document view</button>
@@ -981,6 +981,37 @@
   <!-- Symbol/emoji picker dialog: clicking a symbol inserts it as plain text
        at the saved caret (execCommand insertText), so it persists after save
        and needs no converter support of its own. -->
+  <!-- Document protection dialog (protect.password / protect.restrict): sets
+       or removes the enforcement password and toggles restrict-editing. The
+       real gate lives server-side (POST /api/documents/{id}/protect verifies
+       the current password; POST /save refuses content writes while the
+       stored DOCX is restricted) — these controls are the UX, not the veil. -->
+  <div id="protect-dialog" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="protect-dialog-title">
+    <div class="dialog">
+      <h3 id="protect-dialog-title" data-i18n="Prot.Title">Protect document</h3>
+      <p id="protect-state" class="protect-state" data-i18n="Prot.StateNone">Document is not protected.</p>
+      <div class="dialog-field">
+        <label class="protect-check"><input id="protect-check-restrict" type="checkbox"><span data-i18n="Prot.RestrictLabel">Restrict editing (read only)</span></label>
+      </div>
+      <div class="dialog-field">
+        <label for="protect-new-password" data-i18n="Prot.NewPassword">New password</label>
+        <input id="protect-new-password" type="password" autocomplete="new-password">
+      </div>
+      <div class="dialog-field" id="protect-current-field" hidden>
+        <label for="protect-current-password" data-i18n="Prot.CurrentPassword">Current password</label>
+        <input id="protect-current-password" type="password" autocomplete="current-password">
+      </div>
+      <div class="dialog-field">
+        <label class="protect-check"><input id="protect-check-clear" type="checkbox"><span data-i18n="Prot.RemovePassword">Remove password</span></label>
+      </div>
+      <p class="protect-hint" data-i18n="Prot.Hint">Setting a password enforces the editing restriction.</p>
+      <div class="dialog-actions">
+        <button id="btn-protect-cancel" data-i18n="Prot.Cancel">Cancel</button>
+        <button id="btn-protect-apply" class="primary" data-i18n="Prot.Apply">Apply</button>
+      </div>
+    </div>
+  </div>
+
   <div id="symbol-dialog" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="symbol-dialog-title">
     <div class="dialog">
       <h3 id="symbol-dialog-title">Insert symbol</h3>

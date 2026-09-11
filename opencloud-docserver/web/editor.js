@@ -327,6 +327,7 @@
       redoStack.length = 0;
       lastSnapshot = editor.innerHTML;
       applyPageView();  // map the page-setup marker (if any) to the canvas
+      refreshProtectionState();  // reflect protect.* state (real gate is server-side)
       setStatus(data.blank ? t("Status.EmptyDocument") : t("Status.Ready"));
       updateUndoRedoState();
       updateCounts();
@@ -960,6 +961,8 @@
     if (cmd === "multilevel") { multilevelItem(); return; }
     if (cmd === "insertToF") { insertToFCommand(); return; }
     if (cmd === "openCrossref") { openCrossrefDialog(); return; }
+    if (cmd === "protectDialog") { protectDialog(); return; }
+    if (cmd === "restrictEditing") { toggleRestrictEditing(); return; }
     if (cmd === "toggleSameAsPrev") { toggleSameAsPrevCommand(); return; }
     if (cmd === "browsePlugins") { browsePlugins(); return; }
     if (cmd === "managePlugins") { managePlugins(); return; }
@@ -1238,7 +1241,7 @@
     lastFocusedEl = null;
     el.focus();
   }
-  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog", "page-setup-dialog", "borders-dialog"];
+  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog", "page-setup-dialog", "borders-dialog", "protect-dialog"];
   function getOpenDialog() {
     for (let i = 0; i < DIALOG_IDS.length; i++) {
       const d = document.getElementById(DIALOG_IDS[i]);
@@ -3431,6 +3434,159 @@
     updateActiveStates();
   }
 
+  // ------------------------------------------------------------------
+  // Document protection (protect.password / protect.restrict)
+  // ------------------------------------------------------------------
+  // The real gate is server-side: POST /api/documents/{id}/protect hashes
+  // the password per-document (PBKDF2, salt stored in the DOCX's
+  // w:documentProtection) and verifies the current password before ANY
+  // change; POST /save refuses content writes while the stored document is
+  // restricted. The controls here are the UX — the 403 is the enforcement.
+  // While restricted the editor behaves like a read-only viewer (editing
+  // disabled, save disabled), mirroring Word's enforced protection.
+  const protectDialogEl = document.getElementById("protect-dialog");
+  let protectionState = { restrict_editing: false, password_set: false };
+  let protectionError = "";
+
+  // Mirror the stored document's protection on the editing surface.
+  // READ_ONLY (external lock) always wins: never re-enable a locked editor.
+  function applyProtectionView() {
+    if (READ_ONLY) return;
+    const restricted = !!protectionState.restrict_editing;
+    editor.contentEditable = restricted ? "false" : "true";
+    editor.setAttribute("aria-readonly", restricted ? "true" : "false");
+    saveBtn.disabled = restricted;
+  }
+
+  async function refreshProtectionState() {
+    try {
+      const res = await fetch(api("protect"));
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        protectionError = data.error || ("protect: HTTP " + res.status);
+        return;
+      }
+      protectionError = "";
+      const data = await res.json();
+      protectionState = {
+        restrict_editing: !!data.restrict_editing,
+        password_set: !!data.password_set,
+      };
+      applyProtectionView();
+    } catch (err) {
+      protectionError = "protect unavailable";
+    }
+  }
+
+  function protectStateLabel() {
+    if (protectionState.restrict_editing && protectionState.password_set)
+      return t("Prot.StatePassword");
+    if (protectionState.restrict_editing) return t("Prot.StateRestricted");
+    return t("Prot.StateNone");
+  }
+
+  function protectDialog() {
+    if (protectionError) { setStatus(protectionError, true); return; }
+    if (READ_ONLY) { setStatus("Document protection is managed by the host", true); return; }
+    if (!protectDialogEl) return;
+    const stateEl = document.getElementById("protect-state");
+    const restrictChk = document.getElementById("protect-check-restrict");
+    const newPw = document.getElementById("protect-new-password");
+    const curPw = document.getElementById("protect-current-password");
+    const curField = document.getElementById("protect-current-field");
+    const clearChk = document.getElementById("protect-check-clear");
+    const pwOn = !!protectionState.password_set;
+    if (stateEl) stateEl.textContent = protectStateLabel();
+    if (restrictChk) restrictChk.checked = !!protectionState.restrict_editing;
+    if (newPw) { newPw.value = ""; newPw.disabled = false; }
+    if (curPw) curPw.value = "";
+    if (clearChk) clearChk.checked = false;
+    if (curField) curField.hidden = !pwOn;
+    rememberFocus();
+    protectDialogEl.classList.add("open");
+    if (newPw) newPw.focus();
+  }
+
+  function closeProtectDialog() {
+    if (protectDialogEl) protectDialogEl.classList.remove("open");
+    restoreFocus();
+  }
+
+  async function confirmProtectDialog() {
+    if (!protectDialogEl) return;
+    const restrictChk = document.getElementById("protect-check-restrict");
+    const newPw = document.getElementById("protect-new-password");
+    const curPw = document.getElementById("protect-current-password");
+    const clearChk = document.getElementById("protect-check-clear");
+    const clearing = !!(clearChk && clearChk.checked);
+    const newPwVal = (newPw && newPw.value) ? newPw.value : "";
+    const body = {
+      restrict_editing: !!(restrictChk && restrictChk.checked),
+      password: (!clearing && newPwVal) ? newPwVal : null,
+      clear_password: clearing,
+      current_password: (curPw && curPw.value) ? curPw.value : null,
+    };
+    try {
+      const res = await fetch(api("protect"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus(res.status === 403 ? t("Prot.ErrorWrongPassword") : (data.error || "protection failed"), true);
+        return; // keep the dialog open so the password can be re-entered
+      }
+      protectionState = {
+        restrict_editing: !!data.restrict_editing,
+        password_set: !!data.password_set,
+      };
+      applyProtectionView();
+      closeProtectDialog();
+      setStatus(protectionState.restrict_editing
+        ? t("Prot.StatusRestricted") : t("Prot.StatusUnrestricted"));
+      notifyHost("editing");
+    } catch (err) {
+      setStatus("Protection failed: " + err.message, true);
+    }
+  }
+
+  // Restrict-editing button: toggles directly when no password gates the
+  // change; un-restricting a password-protected document needs the password,
+  // so that path lands in the dialog (where the state line shows why).
+  async function toggleRestrictEditing() {
+    if (protectionError) { setStatus(protectionError, true); return; }
+    if (READ_ONLY) { setStatus("Document protection is managed by the host", true); return; }
+    const turningOn = !protectionState.restrict_editing;
+    if (!turningOn && protectionState.password_set) { protectDialog(); return; }
+    try {
+      const res = await fetch(api("protect"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          restrict_editing: turningOn,
+          password: null,
+          clear_password: false,
+          current_password: null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus(res.status === 403 ? t("Prot.ErrorWrongPassword") : (data.error || "protection failed"), true);
+        return;
+      }
+      protectionState = {
+        restrict_editing: !!data.restrict_editing,
+        password_set: !!data.password_set,
+      };
+      applyProtectionView();
+      setStatus(turningOn ? t("Prot.StatusRestricted") : t("Prot.StatusUnrestricted"));
+      notifyHost("editing");
+    } catch (err) {
+      setStatus("Protection failed: " + err.message, true);
+    }
+  }
+
   // --- OO-parity stubs (documented iteration backlog) --------------------
   // Controls for OO features WO has not implemented carry data-stub="<ref>"
   // in index.html. Clicking reports the ref loudly via setStatus — nothing
@@ -3509,6 +3665,26 @@
   const bmName = document.getElementById("bookmark-name");
   if (bmName) bmName.addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); confirmBookmarkDialog(); }
+  });
+  // Protect dialog wiring (see the document protection section below).
+  const btnProtectApply = document.getElementById("btn-protect-apply");
+  if (btnProtectApply) btnProtectApply.addEventListener("click", confirmProtectDialog);
+  const btnProtectCancel = document.getElementById("btn-protect-cancel");
+  if (btnProtectCancel) btnProtectCancel.addEventListener("click", closeProtectDialog);
+  const protectNewPw = document.getElementById("protect-new-password");
+  if (protectNewPw) protectNewPw.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); confirmProtectDialog(); }
+  });
+  const protectClear = document.getElementById("protect-check-clear");
+  if (protectClear) protectClear.addEventListener("change", () => {
+    const np = document.getElementById("protect-new-password");
+    if (np) np.disabled = protectClear.checked;
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && protectDialogEl && protectDialogEl.classList.contains("open")) {
+      ev.preventDefault();
+      closeProtectDialog();
+    }
   });
   const xrefBtn = document.getElementById("btn-crossref");
   if (xrefBtn) xrefBtn.addEventListener("click", openCrossrefDialog);

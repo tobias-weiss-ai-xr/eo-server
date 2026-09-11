@@ -14,12 +14,16 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import re
 import time
 import urllib.parse
 from pathlib import Path
 
+from docx import Document as DocxDocument
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from fastapi import APIRouter, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
@@ -38,6 +42,7 @@ from ..editor.session import (
     session_from_token,
 )
 from ..lib.store import DocumentStoreError
+from ..wopi.auth import hash_protection_password, verify_protection_password
 from ..wopi.protocol import LOCK_HEADER, invalid_doc_id
 
 router = APIRouter()
@@ -342,6 +347,17 @@ async def save_document(doc_id: str, request: Request) -> JSONResponse:
 
     # Sanitize before conversion to prevent XSS
     html = sanitize_html(html)
+
+    # Protect enforcement: a restricted document refuses content writes
+    # until protection is lifted via POST /protect (which verifies the
+    # password server-side). This is the real gate — the editor's read-only
+    # veil is UX, this 403 is enforcement.
+    stored = _load_bytes(request, doc_id)
+    if stored and _doc_protection_detail(stored)["restricted"]:
+        return JSONResponse(
+            {"error": "document is protected: restrict editing is on — unprotect to save"},
+            status_code=403,
+        )
 
     session = _session_for(request, doc_id)
     if session and session.read_only:
@@ -695,6 +711,15 @@ async def put_document_contents(doc_id: str, request: Request) -> JSONResponse:
     if session and session.read_only:
         return JSONResponse(
             {"error": "read-only: another user is editing this document"},
+            status_code=403,
+        )
+
+    # Protect enforcement on the raw-bytes write path too (WOPI PutFile): a
+    # restricted document must not be replaceable without lifting protection.
+    stored = _load_bytes(request, doc_id)
+    if stored and _doc_protection_detail(stored)["restricted"]:
+        return JSONResponse(
+            {"error": "document is protected: restrict editing is on — unprotect to write"},
             status_code=403,
         )
 
@@ -1154,3 +1179,197 @@ def _load_bytes(request: Request, doc_id: str) -> bytes | None:
         except Exception:
             return None
     return _store(request).get_content(doc_id)
+
+
+# ----------------------------------------------------------------------
+# Document protection (protect.password / protect.restrict)
+# ----------------------------------------------------------------------
+# Protection is stored in the OFFICE FILE itself — w:documentProtection in
+# settings.xml, the same place Word stores Restrict-Editing — and is changed
+# ONLY through POST /api/documents/{id}/protect, which verifies the current
+# password server-side before any mutation (403 on mismatch). POST /save
+# refuses content writes while the stored document is restricted, so the
+# restriction is enforced at the write path, not as a CSS veil. The HTML
+# editor round-trip never carries protection state: because content saves
+# are rejected while restricted, protection never needs to ride the
+# converters' body markers (the HTML is only convertible again after an
+# authenticated /protect has lifted the restriction).
+#
+# The password scheme is PBKDF2-SHA512 (100k iters, per-document random
+# salt) with hex-encoded w:hash / w:salt; cryptAlgorithmSid 14 is SHA-512
+# and cryptSpinCount mirrors the iteration count for human readers. This is
+# our documented scheme (Word's own finalizer is a different, MD5-based
+# construction, so Word can enforce read-only via w:edit but cannot verify
+# our hash to lift it — a known, documented interop limitation).
+
+
+def _doc_protection_detail(data: bytes | None) -> dict:
+    """Read {edit, restricted, password_set, salt, hash} from a stored DOCX.
+
+    Any parse failure (0-byte/blank docs, ODT bytes, corrupt files) yields
+    the unprotected default — enforcement only ever engages on a valid
+    stored DOCX that actually carries w:documentProtection.
+    """
+    detail = {"edit": "none", "restricted": False, "password_set": False,
+              "salt": None, "hash": None}
+    if not data:
+        return detail
+    try:
+        doc = DocxDocument(io.BytesIO(data))
+        settings = doc.settings.element
+        el = settings.find(qn("w:documentProtection"))
+        if el is None:
+            return detail
+        edit = (el.get(qn("w:edit")) or "none").lower()
+        detail["edit"] = edit
+        detail["restricted"] = edit != "none"
+        detail["salt"] = el.get(qn("w:salt"))
+        detail["hash"] = el.get(qn("w:hash"))
+        detail["password_set"] = bool(detail["hash"])
+    except Exception:
+        pass  # not a readable DOCX / missing part -> unprotected default
+    return detail
+
+
+def _write_doc_protection(data: bytes, *, restrict: bool,
+                          salt_hex: str | None, hash_hex: str | None) -> bytes:
+    """Return new DOCX bytes with w:documentProtection (re)written.
+
+    The element is removed entirely when nothing remains to enforce (no
+    restriction, no password), so unprotecting a document restores the
+    plain file."""
+    doc = DocxDocument(io.BytesIO(data))
+    settings = doc.settings.element
+    el = settings.find(qn("w:documentProtection"))
+    if el is not None:
+        settings.remove(el)
+    if restrict or (salt_hex and hash_hex):
+        el = OxmlElement("w:documentProtection")
+        if restrict:
+            el.set(qn("w:edit"), "readOnly")
+        el.set(qn("w:enforcement"), "1")
+        if salt_hex and hash_hex:
+            el.set(qn("w:hash"), hash_hex)
+            el.set(qn("w:salt"), salt_hex)
+            el.set(qn("w:cryptAlgorithmSid"), "14")
+            el.set(qn("w:cryptSpinCount"), "100000")
+        settings.append(el)
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+
+def _persist_protection(request: Request, doc_id: str, data: bytes) -> None:
+    """Persist rewritten document bytes (host store or remote WOPI host)."""
+    client = _client(request, doc_id)
+    if client:
+        client.put_contents(doc_id, data)
+    else:
+        _store(request).put_content(doc_id, data)
+
+
+@router.get("/api/documents/{doc_id}/protect")
+async def document_protect_state(doc_id: str, request: Request) -> JSONResponse:
+    """Current protection state — booleans only, never the hash/salt."""
+    if invalid_doc_id(doc_id):
+        return JSONResponse({"error": "Invalid file id"}, status_code=400)
+    data = _load_bytes(request, doc_id)
+    if data is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    if _document_format(request, doc_id) == "odt":
+        return JSONResponse(
+            {"error": "document protection is a DOCX feature; not available for ODT"},
+            status_code=400,
+        )
+    d = _doc_protection_detail(data)
+    return JSONResponse({"restrict_editing": d["restricted"], "password_set": d["password_set"]})
+
+
+@router.post("/api/documents/{doc_id}/protect")
+async def document_protect(doc_id: str, request: Request) -> JSONResponse:
+    """Change protection. Body: ``{"restrict_editing": bool,
+    "password": str|null, "clear_password": bool, "current_password": str|null}``.
+
+    Any state change that removes an established password (changing it,
+    clearing it, or lifting the restriction it enforces) must present the
+    current password — the server verifies it against the stored hash and
+    answers 403 on mismatch. Real enforcement: a restricted document also
+    refuses content saves until protection is lifted here."""
+    if invalid_doc_id(doc_id):
+        return JSONResponse({"error": "Invalid file id"}, status_code=400)
+    data = _load_bytes(request, doc_id)
+    if data is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    if _document_format(request, doc_id) == "odt":
+        return JSONResponse(
+            {"error": "document protection is a DOCX feature; not available for ODT"},
+            status_code=400,
+        )
+    session = _session_for(request, doc_id)
+    if session and session.read_only:
+        return JSONResponse(
+            {"error": "read-only: another user is editing this document"},
+            status_code=403,
+        )
+    try:
+        payload = json.loads(await request.body())
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JSONResponse({"error": "invalid JSON"}, status_code=400)
+    if not isinstance(payload, dict):
+        return JSONResponse({"error": "invalid JSON body: expected an object"}, status_code=400)
+    restrict = payload.get("restrict_editing")
+    if not isinstance(restrict, bool):
+        return JSONResponse({"error": "restrict_editing must be a boolean"}, status_code=400)
+    new_password: str | None = None
+    password = payload.get("password")
+    if password is not None:
+        if not isinstance(password, str):
+            return JSONResponse({"error": "password must be a string"}, status_code=400)
+        if password:
+            new_password = password
+    clear_password = bool(payload.get("clear_password"))
+    if new_password is not None and clear_password:
+        return JSONResponse(
+            {"error": "cannot both set and clear the password"}, status_code=400)
+    current_password = payload.get("current_password")
+    if current_password is not None and not isinstance(current_password, str):
+        return JSONResponse({"error": "current_password must be a string"}, status_code=400)
+
+    detail = _doc_protection_detail(data)
+    # Removing/changing an established password, or lifting the restriction
+    # it enforces, requires the current password (server-side check).
+    drops_enforcement = detail["password_set"] and (
+        new_password is not None or clear_password
+        or (not restrict and detail["restricted"])
+    )
+    if drops_enforcement:
+        supplied = current_password if isinstance(current_password, str) else ""
+        if not verify_protection_password(supplied, detail["salt"] or "", detail["hash"] or ""):
+            return JSONResponse(
+                {"error": "document is password-protected: wrong current password"},
+                status_code=403,
+            )
+
+    final_restrict = restrict
+    if not restrict:
+        final_salt = final_hash = None  # un-restricting drops enforcement entirely
+    elif new_password is not None:
+        final_salt, final_hash = hash_protection_password(new_password)
+    elif clear_password:
+        final_salt = final_hash = None
+    elif detail["password_set"]:
+        final_salt, final_hash = detail["salt"], detail["hash"]
+    else:
+        final_salt = final_hash = None
+
+    try:
+        out = _write_doc_protection(
+            data, restrict=final_restrict, salt_hex=final_salt, hash_hex=final_hash)
+    except Exception as exc:
+        return JSONResponse({"error": f"protection write failed: {exc}"}, status_code=500)
+    _persist_protection(request, doc_id, out)
+    return JSONResponse({
+        "ok": True,
+        "restrict_editing": final_restrict,
+        "password_set": final_hash is not None,
+    })

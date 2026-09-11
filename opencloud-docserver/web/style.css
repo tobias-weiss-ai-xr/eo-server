@@ -1056,6 +1056,41 @@ main {
   border-color: var(--accent);
 }
 
+/* Document protection dialog (protect.password / protect.restrict). The
+   dialog reuses the standard .dialog field/action classes; the protect
+   additions are the state line, the hint and a full-width password input. */
+#protect-dialog .protect-state {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+#protect-dialog .protect-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#protect-dialog .dialog-field {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#protect-dialog .dialog-field label.protect-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+#protect-dialog .dialog-field input[type="password"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
