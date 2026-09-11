@@ -15,3 +15,6 @@ sample.docx
 # Coverage / scratch
 .coverage
 *.tmp
+
+# local sqlite runtime db — never commit
+mem.db
