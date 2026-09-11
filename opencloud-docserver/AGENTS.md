@@ -48,6 +48,8 @@ buttons — drive them via `document.querySelector(...).click()` or the
 | `listStyle` | `"disc"`,`"circle"`,`"square"`,`"decimal"`,`"lower-alpha"`,`"lower-roman"`,`"upper-alpha"` | restyle (or create) the list under the selection |
 | `code` | — | toggle monospace span (falls back to `fontName` execCommand with no selection) |
 | `smallCaps` / `allCaps` | — | toggle `font-variant`/`text-transform` span (strikeThrough fallback) |
+| `fontSizeInc` / `fontSizeDec` | — | step the selection ±1 along the `fontSize` 1…7 ladder |
+| `changeCase` | `"sentence"`,`"lower"`,`"upper"`,`"title"` | replace the selection with the cased text (`insertText`, one undo step) |
 | `insertHR` | — | `<hr/>` at caret |
 | `insertPageBreak` | — | `div.page-break` + trailing `<p>` (marker contract) |
 | `insertSectionBreak` | — | `hr.section-break` + trailing `<p>` (→ w:sectPr) |

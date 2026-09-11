@@ -760,6 +760,42 @@
       updateUndoRedoState();
       return;
     }
+    // Font size grow/shrink steps (F-131): the toolbar has a size picker;
+    // Word/OO also offer discrete +/- steps. Step along the SAME 1..7 HTML
+    // ladder the picker's options map to (queryCommandValue returns the HTML
+    // size for an applied size), then fall through to the fontSize branch.
+    if (cmd === "fontSizeInc" || cmd === "fontSizeDec") {
+      let step = 3;
+      try { step = parseInt(document.queryCommandValue("fontSize"), 10) || 3; }
+      catch (err) { /* best effort */ }
+      step = Math.min(7, Math.max(1, step + (cmd === "fontSizeInc" ? 1 : -1)));
+      runCommand("fontSize", String(step));
+      return;
+    }
+    // Change case (F-129): transform the selected text in place via
+    // execCommand insertText — the documented editing path (native undo +
+    // real input event -> dirty/history/collab all just work).
+    if (cmd === "changeCase") {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        setStatus(t("Status.NoSelection") || "Select text first");
+        return;
+      }
+      const text = sel.toString();
+      let out = text;
+      const v = String(value || "");
+      if (v === "upper") out = text.toUpperCase();
+      else if (v === "lower") out = text.toLowerCase();
+      else if (v === "title")
+        out = text.replace(/\S+/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
+      else if (v === "sentence")
+        out = text.toLowerCase().replace(/(^\s*|[.!?]\s+)(\w)/g, (m, p, c) => p + c.toUpperCase());
+      if (out === text) return;
+      try { document.execCommand("insertText", false, out); } catch (err) {}
+      updateActiveStates();
+      updateUndoRedoState();
+      return;
+    }
     editor.focus();
     // Custom inserts: horizontal rule, page break and picker symbols.
     // They route through execCommand insertHTML/insertText so each becomes

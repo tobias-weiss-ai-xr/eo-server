@@ -1050,3 +1050,77 @@ def test_page_setup_dialog_roundtrips_to_host(servers):
         finally:
             ctx.close()
             browser.close()
+
+
+def test_change_case_and_font_step_via_bus(servers):
+    """F-129 / F-131: changeCase (sentence/lower/upper/title) and
+    fontSizeInc/fontSizeDec are real bus commands on a selection."""
+    from playwright.sync_api import sync_playwright
+
+    seed = _seed_doc(servers, "case.docx", text="hello world test foo.")
+
+    _SET_RANGE = """([at, end]) => {
+      const ed = document.getElementById('editor');
+      ed.focus();
+      let pos = 0, sn = null, so = 0, en = null, eo = 0;
+      const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        const len = n.data.length;
+        if (!sn && pos + len >= at) { sn = n; so = at - pos; }
+        if (sn && pos + len >= end) { en = n; eo = end - pos; break; }
+        pos += len;
+      }
+      const r = document.createRange();
+      if (!en) { r.setStart(sn, Math.min(so, sn.data.length)); r.collapse(true); }
+      else { r.setStart(sn, so); r.setEnd(en, eo); }
+      const sel = getSelection();
+      sel.removeAllRanges(); sel.addRange(r);
+    }"""
+
+    def _bus(frame, cmd, value=None, at=None, end=None):
+        if at is not None:
+            frame.evaluate(_SET_RANGE, [at, end if end is not None else at])
+        frame.evaluate(
+            "([c, v]) => dispatchEvent(new CustomEvent('wo-command',"
+            " { detail: { command: c, value: v } }))",
+            [cmd, value],
+        )
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context()
+            parent = ctx.new_page()
+            parent.goto(_parent_url(servers, seed))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "hello world test foo." in _frame_text(frame))
+
+            n = len("hello world test foo.")
+
+            # uppercase then lowercase
+            _bus(frame, "changeCase", "upper", 0, n)
+            _wait(lambda: "HELLO WORLD TEST FOO." in _frame_text(frame))
+            _bus(frame, "changeCase", "lower", 0, n)
+            _wait(lambda: "hello world test foo." in _frame_text(frame))
+            # title + sentence
+            _bus(frame, "changeCase", "title", 0, n)
+            _wait(lambda: "Hello World Test Foo." in _frame_text(frame))
+            _bus(frame, "changeCase", "sentence", 0, n)
+            _wait(lambda: "Hello world test foo." in _frame_text(frame))
+
+            # font step: measured px grows then shrinks back past the baseline
+            def _fs_px():
+                return frame.evaluate(
+                    "(() => { const s = document.querySelector('#editor span[style*=font-size]');"
+                    " return s ? parseFloat(getComputedStyle(s).fontSize) : 0 })()")
+            _wait(lambda: _fs_px() == 0)
+            _bus(frame, "fontSizeInc", None, 0, 5)
+            _wait(lambda: _fs_px() > 0)
+            inc = _fs_px()
+            _bus(frame, "fontSizeDec", None, 0, 5)
+            _wait(lambda: 0 < _fs_px() < inc)
+        finally:
+            ctx.close()
+            browser.close()
