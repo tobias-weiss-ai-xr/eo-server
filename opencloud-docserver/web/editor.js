@@ -961,6 +961,8 @@
     if (cmd === "insertToF") { insertToFCommand(); return; }
     if (cmd === "openCrossref") { openCrossrefDialog(); return; }
     if (cmd === "toggleSameAsPrev") { toggleSameAsPrevCommand(); return; }
+    if (cmd === "browsePlugins") { browsePlugins(); return; }
+    if (cmd === "managePlugins") { managePlugins(); return; }
     const isBlock =
       cmd === "formatBlock" && /^(H[1-6]|P)$/i.test(String(value || ""));
     // Font size/family and color have no semantic tags (the sanitizer strips
@@ -4618,6 +4620,17 @@
 
   pollCollab();
   announcePresence();
+
+  // --- plugins browser/manager dialogs -------------------------------
+  function browsePlugins() {
+    if (READ_ONLY) return;
+    setStatus("Browse plugins dialog would open here (plugins.browse)");
+  }
+
+  function managePlugins() {
+    if (READ_ONLY) return;
+    setStatus("Manage plugins dialog would open here (plugins.manage)");
+  }
 
   loadDocument();
 })();

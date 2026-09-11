@@ -1105,6 +1105,22 @@ async def ai_propose(doc_id: str, request: Request) -> JSONResponse:
 
 
 # ----------------------------------------------------------------------
+# Plugin registry
+# ----------------------------------------------------------------------
+
+@router.get("/api/plugins")
+async def list_plugins(request: Request) -> JSONResponse:
+    """Return the installed plugins registry.
+
+    In host mode this returns the local store's plugin metadata. In client
+    mode it forwards to the remote WOPI host when available.
+    """
+    # For now, return an empty list. A real implementation would query
+    # the plugin store or forward to the WOPI host's plugin endpoint.
+    return JSONResponse({"plugins": []})
+
+
+# ----------------------------------------------------------------------
 # Locking (editor-level convenience over the WOPI host store)
 # ----------------------------------------------------------------------
 
