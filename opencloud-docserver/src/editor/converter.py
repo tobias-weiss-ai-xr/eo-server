@@ -2601,9 +2601,11 @@ def _apply_section_flags(hy_attrs: str | None, ln_attrs: str | None, doc) -> Non
                 el = sectPr.find(qn("w:lnNumType"))
                 if el is None:
                     el = OxmlElement("w:lnNumType")
-                    anchor = (sectPr.find(qn("w:docGrid"))
-                              or sectPr.find(qn("w:cols"))
-                              or sectPr.find(qn("w:pgNumType")))
+                    anchor = sectPr.find(qn("w:docGrid"))
+                    if anchor is None:
+                        anchor = sectPr.find(qn("w:cols"))
+                    if anchor is None:
+                        anchor = sectPr.find(qn("w:pgNumType"))
                     if anchor is not None:
                         anchor.addprevious(el)
                     else:

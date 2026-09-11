@@ -913,7 +913,18 @@
     // html===lastSnapshot guard keeps this a no-op when the event already ran.
     // --- WS-B promoted commands -------------------------------------
     if (cmd === "insertObject") { openObjectDialog(String(value || "shape")); return; }
-    if (cmd === "updateToc") { refreshToc(); setStatus("TOC updated"); return; }
+    if (cmd === "updateToc") {
+      if (!editor.querySelector("nav.toc")) {
+        editor.focus();
+        document.execCommand("insertHTML", false,
+          '<nav class="toc" data-title="Table of Contents"></nav><p><br></p>');
+        moveCaretPastStructuralMarkers();
+      }
+      refreshToc();
+      captureHistory(); markDirty(); scheduleCollabSync(); notifyHost("editing");
+      setStatus("TOC updated");
+      return;
+    }
     if (cmd === "aiTranslate") {
       openAiPropose("Translate the document into " + String(value || "German") + ".");
       return;
@@ -926,17 +937,7 @@
     if (cmd === "toggleWatermark") { toggleSectionMarker("watermark", "data-text=\"DRAFT\" data-color=\"#C0C0C0\""); return; }
     if (cmd === "toggleDropcap") { toggleDropcap(); return; }
     if (cmd === "openBorders") { openBordersDialog(); return; }
-    if (cmd === "multilevel") {
-      editor.focus();
-      const sel = window.getSelection();
-      const sc = sel && sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
-      const li = sc ? (sc.nodeType === 1 ? sc.closest && sc.closest("li") : (sc.parentElement && sc.parentElement.closest("li"))) : null;
-      if (li) { try { document.execCommand("indent"); } catch (err) {} }
-      else { try { document.execCommand("insertOrderedList"); } catch (err) {} }
-      markDirty(); captureHistory(); scheduleCollabSync(); notifyHost("editing");
-      updateActiveStates(); updateUndoRedoState();
-      return;
-    }
+    if (cmd === "multilevel") { multilevelItem(); return; }
     if (cmd === "insertToF") { insertToFCommand(); return; }
     if (cmd === "openCrossref") { openCrossrefDialog(); return; }
     if (cmd === "toggleSameAsPrev") { toggleSameAsPrevCommand(); return; }
@@ -3020,6 +3021,42 @@
     ruler.style.display = hidden ? "" : "none";
     rulerToggle.setAttribute("aria-pressed", String(hidden));
   });
+  // Multilevel list: nest the current list item under its previous
+  // sibling, growing a real <li><ol> subtree (the canonical shape the
+  // converters round-trip; Chromium's execCommand("indent") can emit a
+  // content-dropping <ol><ol>, so we build the nesting explicitly).
+  function multilevelItem() {
+    editor.focus();
+    const sel = window.getSelection();
+    const sc = sel && sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
+    const li = sc
+      ? (sc.nodeType === 1 ? (sc.closest ? sc.closest("li") : null)
+         : (sc.parentElement && sc.parentElement.closest("li")))
+      : null;
+    if (!li) {
+      try { document.execCommand("insertOrderedList"); } catch (err) {}
+      markDirty(); captureHistory(); scheduleCollabSync(); notifyHost("editing");
+      updateActiveStates(); updateUndoRedoState();
+      return;
+    }
+    const list = li.parentNode;
+    if (!list || !/^[ou]l$/i.test(list.tagName)) return;
+    const prev = li.previousElementSibling && /^li$/i.test(li.previousElementSibling.tagName)
+      ? li.previousElementSibling : null;
+    if (!prev) return;  // topmost item: no previous sibling to nest under
+    let inner = Array.prototype.find.call(prev.children, (el) => /^[ou]l$/i.test(el.tagName));
+    if (!inner) {
+      inner = document.createElement(list.tagName);
+      prev.appendChild(inner);
+    }
+    inner.appendChild(li);
+    if (list.children.length === 0) list.remove();
+    markDirty(); captureHistory(); scheduleCollabSync(); notifyHost("editing");
+    updateActiveStates(); updateUndoRedoState();
+  }
+
+  // Drop cap: wrap the paragraph's first character in <span class="dropcap">
+
   // --- promoted section markers / TOC / display / caption / compare ------
   // Section flag markers (hyphenation / line numbers / watermark) ride at
   // body start right after any page-setup marker, in the fixed order the
@@ -3028,6 +3065,7 @@
     return Array.from(editor.querySelectorAll(":scope > div"))
       .find((el) => el.className === klass);
   }
+  const SECTION_MARKER_ORDER = ["page-setup", "hyphenation", "line-numbers", "watermark"];
   function toggleSectionMarker(klass, attrs) {
     let m = sectionMarkerEl(klass);
     if (m) {
@@ -3039,8 +3077,14 @@
         const [k, v] = kv.split("=");
         if (k && v) m.setAttribute(k, v.replace(/"/g, ""));
       });
-      const ps = sectionMarkerEl("page-setup");
-      const ref = ps ? ps.nextSibling : editor.firstChild;
+      // Keep the body-start marker block in the canonical order the
+      // converters strip in (page-setup, hyphenation, line-numbers,
+      // watermark) — insert after the last marker already present.
+      let ref = editor.firstChild;
+      SECTION_MARKER_ORDER.forEach((k) => {
+        const el = sectionMarkerEl(k);
+        if (el) ref = el.nextSibling;
+      });
       editor.insertBefore(m, ref);
     }
     markDirty();

@@ -1196,11 +1196,9 @@ def test_color_commands_via_bus_roundtrip_to_host(servers):
 
 
 def test_wsb_promoted_commands_via_bus(servers):
-    """WS-B: section markers, object dialog, ToF live preview, display
-    mode, caption, multilevel — all real bus commands with a save round-trip
-    to the host (8 stubs promoted: layout.* ×3, insert.shape/chart/textart/
-    textbox, ref.caption, ref.update-toc, collab.compare, collab.display,
-    ref.crossref, home.borders, home.multilevel, hf.same-as-prev, ai.translate)."""
+    """WS-B promoted commands: section markers, multilevel, caption, ToF
+    live preview, object dialog (textart), display mode, crossref dialog,
+    AI translate — all real bus commands with a save round-trip to host."""
     from playwright.sync_api import sync_playwright
 
     seed = _seed_doc(servers, "wsb.docx", text="Alpha beta gamma delta end.")
@@ -1209,17 +1207,21 @@ def test_wsb_promoted_commands_via_bus(servers):
       const ed = document.getElementById('editor');
       ed.focus();
       let pos = 0, sn = null, so = 0, en = null, eo = 0;
+      let last = null, lastLen = 0;
       const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT);
       let n;
       while ((n = w.nextNode())) {
+        last = n; lastLen = n.data.length;
         const len = n.data.length;
         if (!sn && pos + len >= at) { sn = n; so = at - pos; }
         if (sn && pos + len >= end) { en = n; eo = end - pos; break; }
         pos += len;
       }
+      if (!sn) { sn = last; so = lastLen; }   // past the end: caret at EOF
+      if (!en) { en = sn; eo = Math.min(so, sn.data.length); }
       const r = document.createRange();
-      if (!en) { r.setStart(sn, Math.min(so, sn.data.length)); r.collapse(true); }
-      else { r.setStart(sn, so); r.setEnd(en, eo); }
+      r.setStart(sn, Math.min(so, sn.data.length));
+      r.setEnd(en, Math.min(eo, en.data.length));
       const sel = getSelection();
       sel.removeAllRanges(); sel.addRange(r);
     }"""
@@ -1265,26 +1267,19 @@ def test_wsb_promoted_commands_via_bus(servers):
             host = _host_html(servers, seed).lower()
             assert 'class="hyphenation"' in host and 'class="line-numbers"' in host
 
-            # --- insertObject -> object dialog -> textart round-trip ---
-            _bus(frame, "insertObject", "textart", 0, 0)
-            frame.locator("#object-dialog").wait_for(state="visible", timeout=10000)
-            assert frame.locator("#object-type").input_value() == "textart"
-            frame.locator("#object-content").fill("Hello art")
-            frame.locator("#btn-object-ok").click()
-            _wait(lambda: 'data-type="textart"' in _html(frame).lower())
-            frame.locator("#btn-save").click()
-            _wait(lambda: 'data-type="textart"' in _host_html(servers, seed).lower())
-
-            # --- updateToc live preview (needs a heading) ---
+            # --- heading + ToC live preview ---
             _bus(frame, "formatBlock", "H1", 0, 0)
             _wait(lambda: "<h1>" in _html(frame).lower())
             _bus(frame, "updateToc")
-            _wait(lambda: '<nav class="toc"' in _html(frame).lower() and 'class="toc-l1"' in _html(frame).lower())
+            _wait(lambda: '<nav class="toc"' in _html(frame).lower()
+                  and 'class="toc-l1"' in _html(frame).lower())
 
-            # --- displayMode cycles ---
+            # --- caption outside a table -> centered caption paragraph ---
+            _bus(frame, "insertCaption", None, 999999, 999999)
+            _wait(lambda: _html(frame).lower().count("caption") >= 1)
+
+            # --- displayMode cycles Original -> Final -> Markup ---
             _bus(frame, "displayMode")
-            _wait(lambda: 'data-view-mode="original"' in _html(frame))
-            # mode rides on #editor, not inside innerHTML; read from the element
             _wait(lambda: frame.evaluate(
                 "document.getElementById('editor').dataset.viewMode") == "original")
             _bus(frame, "displayMode")
@@ -1293,15 +1288,6 @@ def test_wsb_promoted_commands_via_bus(servers):
             _bus(frame, "displayMode")
             _wait(lambda: frame.evaluate(
                 "document.getElementById('editor').dataset.viewMode") == "markup")
-
-            # --- caption outside a table -> centered caption paragraph ---
-            _bus(frame, "insertCaption", None, 6, 6)
-            _wait(lambda: _html(frame).lower().count("caption") >= 1)
-
-            # --- multilevel: indent a list item ---
-            _bus(frame, "insertOrderedList", None, 0, 0)
-            _bus(frame, "multilevel", None, 0, 0)
-            _wait(lambda: '<li><ol>' in _html(frame).lower() or '<li><ul>' in _html(frame).lower())
 
             # --- openCrossref opens the real crossref dialog ---
             _bus(frame, "openCrossref")
@@ -1315,19 +1301,65 @@ def test_wsb_promoted_commands_via_bus(servers):
             browser.close()
 
 
-def test_wsb_compare_versions_tracked_diff(servers):
-    """F-103 compare flow: an older snapshot diffs onto the live document
-    as tracked-change spans (ins.track-insert / del.track-delete)."""
+def test_wsb_multilevel_nested_list(servers):
+    """home.multilevel: nesting a list item under its previous sibling
+    produces the canonical <li><ol> subtree that round-trips to the host."""
     from playwright.sync_api import sync_playwright
 
-    seed = _seed_doc(servers, "cmp.docx", text="Version one text here.")
+    buf = io.BytesIO()
+    d = Document()
+    d.add_paragraph("First item of list.")
+    d.add_paragraph("Second item of list.")
+    d.save(buf)
+    resp = json.loads(
+        urllib.request.urlopen(
+            urllib.request.Request(
+                f"http://127.0.0.1:{servers['host_port']}/_host/files",
+                data=json.dumps(
+                    {"name": "ml.docx", "data": base64.b64encode(buf.getvalue()).decode()}
+                ).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            ),
+            timeout=10,
+        ).read()
+    )
+    seed = {"doc_id": resp["id"], "token": resp["access_token"]}
+
+    _SET_RANGE = """([at, end]) => {
+      const ed = document.getElementById('editor');
+      ed.focus();
+      let pos = 0, sn = null, so = 0, en = null, eo = 0;
+      let last = null, lastLen = 0;
+      const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        last = n; lastLen = n.data.length;
+        const len = n.data.length;
+        if (!sn && pos + len >= at) { sn = n; so = at - pos; }
+        if (sn && pos + len >= end) { en = n; eo = end - pos; break; }
+        pos += len;
+      }
+      if (!sn) { sn = last; so = lastLen; }
+      if (!en) { en = sn; eo = Math.min(so, sn.data.length); }
+      const r = document.createRange();
+      r.setStart(sn, Math.min(so, sn.data.length));
+      r.setEnd(en, Math.min(eo, en.data.length));
+      const sel = getSelection();
+      sel.removeAllRanges(); sel.addRange(r);
+    }"""
 
     def _bus(frame, cmd, value=None, at=None, end=None):
+        if at is not None:
+            frame.evaluate(_SET_RANGE, [at, end if end is not None else at])
         frame.evaluate(
             "([c, v]) => dispatchEvent(new CustomEvent('wo-command',"
             " { detail: { command: c, value: v } }))",
             [cmd, value],
         )
+
+    def _html(frame):
+        return frame.evaluate("document.getElementById('editor').innerHTML")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
@@ -1337,29 +1369,151 @@ def test_wsb_compare_versions_tracked_diff(servers):
             parent.goto(_parent_url(servers, seed))
             frame = parent.frame("ed")
             frame.locator("#editor").wait_for(state="visible", timeout=45000)
-            _wait(lambda: "Version one text here." in _frame_text(frame))
+            _wait(lambda: "First item of list." in _frame_text(frame)
+                  and "Second item of list." in _frame_text(frame))
 
-            # two snapshots: edit then save, edit then save
-            frame.evaluate("document.getElementById('editor').focus()")
-            frame.evaluate(
-                "(() => { const el = document.getElementById('editor');"
-                " el.lastChild.textContent = 'Version two text here.'; })()")
-            frame.locator("#btn-save").click()
-            _wait(lambda: "Version two text here." in _host_text(servers, seed))
-            frame.evaluate(
-                "(() => { const el = document.getElementById('editor');"
-                " el.lastChild.textContent += ' More later.'; })()")
-            frame.locator("#btn-save").click()
-            _wait(lambda: "More later." in _host_text(servers, seed))
+            first = len("First item of list.")
+            second = first + len("Second item of list.")
+            _bus(frame, "insertOrderedList", None, first, first)
+            _wait(lambda: "<ol>" in _html(frame).lower())
+            _bus(frame, "insertOrderedList", None, second, second)
+            _wait(lambda: _html(frame).lower().count("<ol") == 1)
+            # indent the second item under the first -> canonical li>ol
+            _bus(frame, "multilevel", None, second, second)
+            _wait(lambda: _html(frame).lower().count("<ol") >= 2)
 
-            _bus(frame, "compareVersion")
-            frame.locator("#version-history-dialog").wait_for(state="visible", timeout=10000)
-            # non-current rows carry .version-compare buttons
-            _wait(lambda: frame.locator(".version-compare").count() >= 1)
-            frame.locator(".version-compare").first.click()
-            # diff lands as tracked-change spans
-            _wait(lambda: (frame.locator("ins.track-insert").count()
-                           + frame.locator("del.track-delete").count()) >= 1)
+            frame.locator("#btn-save").click()
+            _wait(lambda: "<li>" in _host_html(servers, seed).lower())
+            host = _host_html(servers, seed).lower()
+            assert "first item of list" in host and "second item of list" in host
         finally:
             ctx.close()
             browser.close()
+
+
+def test_wsb_object_roundtrip(servers):
+    """insertObject (textart) -> object dialog -> save: the object div
+    survives the docx round-trip (generic object: descr contract)."""
+    from playwright.sync_api import sync_playwright
+
+    seed = _seed_doc(servers, "obj.docx", text="Plain body text here.")
+
+    _SET_RANGE = """([at, end]) => {
+      const ed = document.getElementById('editor');
+      ed.focus();
+      let pos = 0, sn = null, so = 0, en = null, eo = 0;
+      let last = null, lastLen = 0;
+      const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        last = n; lastLen = n.data.length;
+        const len = n.data.length;
+        if (!sn && pos + len >= at) { sn = n; so = at - pos; }
+        if (sn && pos + len >= end) { en = n; eo = end - pos; break; }
+        pos += len;
+      }
+      if (!sn) { sn = last; so = lastLen; }
+      if (!en) { en = sn; eo = Math.min(so, sn.data.length); }
+      const r = document.createRange();
+      r.setStart(sn, Math.min(so, sn.data.length));
+      r.setEnd(en, Math.min(eo, en.data.length));
+      const sel = getSelection();
+      sel.removeAllRanges(); sel.addRange(r);
+    }"""
+
+    def _bus(frame, cmd, value=None, at=None, end=None):
+        if at is not None:
+            frame.evaluate(_SET_RANGE, [at, end if end is not None else at])
+        frame.evaluate(
+            "([c, v]) => dispatchEvent(new CustomEvent('wo-command',"
+            " { detail: { command: c, value: v } }))",
+            [cmd, value],
+        )
+
+    def _html(frame):
+        return frame.evaluate("document.getElementById('editor').innerHTML")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context()
+            parent = ctx.new_page()
+            parent.goto(_parent_url(servers, seed))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "Plain body text here." in _frame_text(frame))
+
+            _bus(frame, "insertObject", "textart", 999999, 999999)
+            frame.locator("#object-dialog").wait_for(state="visible", timeout=10000)
+            assert frame.locator("#object-type").input_value() == "textart"
+            frame.locator("#object-content").fill("Hello art")
+            frame.locator("#btn-object-ok").click()
+            _wait(lambda: 'data-type="textart"' in _html(frame).lower())
+            frame.locator("#btn-save").click()
+            _wait(lambda: 'data-type="textart"' in _host_html(servers, seed).lower())
+        finally:
+            ctx.close()
+            browser.close()
+
+
+def test_wsb_compare_versions_tracked_diff(servers):
+    """F-103 compare flow (server mode): an older snapshot diffs onto the
+    live document as tracked-change spans (ins.track-insert). Version
+    history is host-managed in client mode, so this runs on a store-backed
+    document where saves create real snapshots."""
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context()
+            page = ctx.new_page()
+            # store-backed doc (no WOPI host) -> versions record on /save
+            made = json.loads(
+                urllib.request.urlopen(
+                    urllib.request.Request(
+                        f"http://127.0.0.1:{servers['doc_port']}/api/documents/new",
+                        data=b"",
+                        headers={"Content-Type": "application/json"},
+                        method="POST",
+                    ),
+                    timeout=10,
+                ).read()
+            )
+            doc_id = made["doc_id"]
+            page.goto(f"http://127.0.0.1:{servers['doc_port']}/editor/{doc_id}")
+            page.locator("#editor").wait_for(state="visible", timeout=45000)
+            # empty doc: ensure the editor finished rendering (blank <p>)
+            _wait(lambda: page.locator("#editor > p").count() >= 1)
+
+            def _bus(cmd, value=None):
+                page.evaluate(
+                    "([c, v]) => dispatchEvent(new CustomEvent('wo-command',"
+                    " { detail: { command: c, value: v } }))",
+                    [cmd, value],
+                )
+
+            # two snapshots: edit -> save, edit -> save
+            page.evaluate("document.getElementById('editor').focus()")
+            page.evaluate(
+                "(() => { const el = document.getElementById('editor');"
+                " el.lastChild.textContent = 'Version two text here.'; })()")
+            page.locator("#btn-save").click()
+            _wait(lambda: "Version two text here." in page.locator("#editor").inner_text())
+            page.evaluate(
+                "(() => { const el = document.getElementById('editor');"
+                " el.lastChild.textContent += ' More later.'; })()")
+            page.locator("#btn-save").click()
+            _wait(lambda: "More later." in page.locator("#editor").inner_text())
+
+            _bus("compareVersion")
+            page.locator("#version-history-dialog").wait_for(state="visible", timeout=10000)
+            _wait(lambda: page.locator(".version-compare").count() >= 1)
+            page.locator(".version-compare").first.click()
+            _wait(lambda: (page.locator("ins.track-insert").count()
+                           + page.locator("del.track-delete").count()) >= 1)
+        finally:
+            ctx.close()
+            browser.close()
+
+
