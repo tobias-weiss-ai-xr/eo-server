@@ -965,6 +965,9 @@
     if (cmd === "restrictEditing") { toggleRestrictEditing(); return; }
     if (cmd === "toggleSameAsPrev") { toggleSameAsPrevCommand(); return; }
     if (cmd === "browsePlugins") { browsePlugins(); return; }
+    if (cmd === "toggleInk") { toggleInk(value); return; }
+    if (cmd === "inkColor") { setInkColor(); return; }
+    if (cmd === "inkThickness") { setInkThickness(); return; }
     if (cmd === "managePlugins") { managePlugins(); return; }
     const isBlock =
       cmd === "formatBlock" && /^(H[1-6]|P)$/i.test(String(value || ""));
@@ -3432,6 +3435,155 @@
       : "Same as previous (off)");
     markDirty(); captureHistory(); scheduleCollabSync(); notifyHost("editing");
     updateActiveStates();
+  }
+
+  // --- Ink canvas drawing (Draw tab) --------------------------------
+  // Minimal OO-parity ink layer: canvas overlay, pen/highlighter/eraser
+  // tools, color picker, thickness picker. Drawing state is ephemeral
+  // (not persisted to DOCX) for this MVP — view-only overlay like the
+  // navigation sidebar. Future: serialize canvas to image or SVG.
+  let inkMode = null; // null | "select" | "pen" | "highlighter" | "eraser"
+  let inkColor = "#000000";
+  let inkThickness = 3;
+  let isDrawing = false;
+  const inkCanvas = document.getElementById("ink-canvas");
+  const inkCtx = inkCanvas ? inkCanvas.getContext("2d") : null;
+
+  function initInkCanvas() {
+    if (!inkCanvas || !inkCtx) return;
+    // Set canvas size to match editor on first use
+    const editorRect = editor.getBoundingClientRect();
+    inkCanvas.width = editorRect.width;
+    inkCanvas.height = editorRect.height;
+    inkCanvas.style.width = editorRect.width + "px";
+    inkCanvas.style.height = editorRect.height + "px";
+    // Clear canvas
+    inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
+    inkCtx.strokeStyle = inkColor;
+    inkCtx.lineWidth = inkThickness;
+    inkCtx.lineCap = "round";
+    inkCtx.lineJoin = "round";
+    // Setup event listeners
+    inkCanvas.addEventListener("mousedown", startDrawing);
+    inkCanvas.addEventListener("mousemove", draw);
+    inkCanvas.addEventListener("mouseup", stopDrawing);
+    inkCanvas.addEventListener("mouseout", stopDrawing);
+    // Touch support
+    inkCanvas.addEventListener("touchstart", handleTouch);
+    inkCanvas.addEventListener("touchmove", handleTouch);
+    inkCanvas.addEventListener("touchend", stopDrawing);
+  }
+
+  function handleTouch(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent(e.type, {
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    });
+    if (e.type === "touchstart") startDrawing(mouseEvent);
+    else if (e.type === "touchmove") draw(mouseEvent);
+  }
+
+  function getCanvasPosition(e) {
+    if (!inkCanvas) return { x: 0, y: 0 };
+    const rect = inkCanvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  }
+
+  function startDrawing(e) {
+    if (!inkCanvas || !inkCtx || inkMode === "select" || inkMode === null) return;
+    isDrawing = true;
+    const pos = getCanvasPosition(e);
+    inkCtx.beginPath();
+    inkCtx.moveTo(pos.x, pos.y);
+    if (inkMode === "eraser") {
+      // Use destination-out compositing for eraser
+      inkCtx.globalCompositeOperation = "destination-out";
+      inkCtx.strokeStyle = "rgba(0,0,0,1)";
+    } else {
+      inkCtx.globalCompositeOperation = "source-over";
+      inkCtx.strokeStyle = inkColor;
+      if (inkMode === "highlighter") {
+        // Highlighter is semi-transparent
+        inkCtx.globalAlpha = 0.4;
+      } else {
+        inkCtx.globalAlpha = 1.0;
+      }
+    }
+    draw(e);
+  }
+
+  function draw(e) {
+    if (!isDrawing || !inkCanvas || !inkCtx) return;
+    const pos = getCanvasPosition(e);
+    inkCtx.lineTo(pos.x, pos.y);
+    inkCtx.stroke();
+  }
+
+  function stopDrawing() {
+    isDrawing = false;
+    if (inkCtx) {
+      inkCtx.closePath();
+      // Reset compositing
+      inkCtx.globalCompositeOperation = "source-over";
+      inkCtx.globalAlpha = 1.0;
+      inkCtx.strokeStyle = inkColor;
+    }
+  }
+
+  function toggleInk(mode) {
+    if (!inkCanvas) {
+      setStatus("Ink canvas not found", true);
+      return;
+    }
+    initInkCanvas();
+    // Toggle off if already in the requested mode
+    if (inkMode === mode) {
+      inkMode = null;
+      inkCanvas.hidden = true;
+      inkCanvas.classList.remove("drawing");
+      setStatus("Ink mode: off");
+      return;
+    }
+    // Switch mode
+    inkMode = mode;
+    inkCanvas.hidden = false;
+    inkCanvas.classList.add("drawing");
+    // Update cursor based on mode
+    if (mode === "select") {
+      inkCanvas.style.cursor = "default";
+    } else if (mode === "eraser") {
+      // Eraser cursor: use a simple string without nested quotes
+      inkCanvas.style.cursor = "crosshair";
+      // For better UX, could use CSS class instead
+    } else {
+      inkCanvas.style.cursor = "crosshair";
+    }
+    setStatus(`Ink mode: ${mode}`);
+  }
+
+  function setInkColor() {
+    // For now, use a simple color picker dialog or default color
+    // In a real implementation, this would open a color picker
+    // For this MVP, cycle through some colors
+    const colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"];
+    const currentIndex = colors.indexOf(inkColor);
+    inkColor = colors[(currentIndex + 1) % colors.length];
+    if (inkCtx) inkCtx.strokeStyle = inkColor;
+    setStatus(`Ink color: ${inkColor}`);
+  }
+
+  function setInkThickness() {
+    // Cycle through thickness values
+    const thicknesses = [1, 3, 5, 8, 12];
+    const currentIndex = thicknesses.indexOf(inkThickness);
+    inkThickness = thicknesses[(currentIndex + 1) % thicknesses.length];
+    if (inkCtx) inkCtx.lineWidth = inkThickness;
+    setStatus(`Ink thickness: ${inkThickness}px`);
   }
 
   // ------------------------------------------------------------------

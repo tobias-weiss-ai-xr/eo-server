@@ -430,12 +430,12 @@
          full list is pinned by tests/test_file_menu.py. Turn any stub into a
          real feature by giving it an id + a command handler. -->
     <div class="ribbon-page" data-tab="draw" role="group" aria-label="Draw ribbon" data-i18n-aria-label="Tab.Draw">
-    <button type="button" data-stub="draw.select" data-i18n="Draw.Select">Select</button>
-    <button type="button" data-stub="draw.pen" data-i18n="Draw.Pen">Pen</button>
-    <button type="button" data-stub="draw.highlighter" data-i18n="Draw.Highlighter">Highlighter</button>
-    <button type="button" data-stub="draw.eraser" data-i18n="Draw.Eraser">Eraser</button>
-    <button type="button" data-stub="draw.ink" data-i18n="Draw.Ink">Ink color</button>
-    <button type="button" data-stub="draw.ink-thickness" data-i18n="Draw.InkThickness">Ink thickness</button>
+    <button type="button" id="btn-ink-select" data-cmd="toggleInk" data-value="select" data-i18n="Draw.Select" title="Select" data-i18n-title="Draw.SelectTitle">Select</button>
+    <button type="button" id="btn-ink-pen" data-cmd="toggleInk" data-value="pen" data-i18n="Draw.Pen" title="Pen" data-i18n-title="Draw.PenTitle">Pen</button>
+    <button type="button" id="btn-ink-highlighter" data-cmd="toggleInk" data-value="highlighter" data-i18n="Draw.Highlighter" title="Highlighter" data-i18n-title="Draw.HighlighterTitle">Highlighter</button>
+    <button type="button" id="btn-ink-eraser" data-cmd="toggleInk" data-value="eraser" data-i18n="Draw.Eraser" title="Eraser" data-i18n-title="Draw.EraserTitle">Eraser</button>
+    <button type="button" id="btn-ink-color" data-cmd="inkColor" data-i18n="Draw.Ink" title="Ink color" data-i18n-title="Draw.InkTitle">Ink color</button>
+    <button type="button" id="btn-ink-thickness" data-cmd="inkThickness" data-i18n="Draw.InkThickness" title="Ink thickness" data-i18n-title="Draw.InkThicknessTitle">Ink thickness</button>
     </div>
     <div class="ribbon-page" data-tab="layout" role="group" aria-label="Layout ribbon">
     <button id="btn-page-break" title="Insert page break" aria-label="Insert page break">⏎</button>
@@ -610,6 +610,8 @@
     <div id="editor" contenteditable="true" spellcheck="true"
          role="textbox" aria-multiline="true"
          aria-label="Document" data-i18n-aria-label="A11y.EditorLabel"></div>
+    <!-- Ink canvas overlay for drawing (Draw tab). Positioned absolute over the editor. -->
+    <canvas id="ink-canvas" class="ink-canvas" hidden aria-label="Ink drawing canvas"></canvas>
   </main>
   <!-- View-tab navigation sidebar (document outline; view-only). -->
   <aside id="nav-panel" class="nav-panel" hidden aria-label="Navigation" data-i18n-aria-label="View.Navigation">
