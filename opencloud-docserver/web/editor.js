@@ -945,6 +945,8 @@
     if (cmd === "toggleChat") { toggleChat(); return; }
     if (cmd === "insertCaption") { insertCaptionCommand(); return; }
     if (cmd === "compareVersion") { openCompareView(); return; }
+    if (cmd === "prevTrackedChange") { prevTrackedChange(); return; }
+    if (cmd === "nextTrackedChange") { nextTrackedChange(); return; }
     if (cmd === "toggleHyphenation") { toggleSectionMarker("hyphenation", "data-auto=\"1\""); return; }
     if (cmd === "toggleLineNumbers") { toggleSectionMarker("line-numbers", "data-restart=\"eachPage\""); return; }
     if (cmd === "toggleWatermark") { toggleSectionMarker("watermark", "data-text=\"DRAFT\" data-color=\"#C0C0C0\""); return; }
@@ -2030,6 +2032,67 @@
     const items = editor.querySelectorAll("ins.track-insert, del.track-delete");
     if (items.length === 0) closeReviewPanel();
   }
+
+  // Tracked-change prev/next navigation (collab.prev-change /
+  // collab.next-change). View-only: scrolls the change into view and
+  // selects it — no converter touch, mirroring the #nav-panel heading-jump
+  // precedent. Anchored on the caret so repeated clicks walk the changes in
+  // document order; selecting a change moves the caret into it, so the next
+  // click advances to the following change (sequential walk for free).
+  function navigateTrackedChange(dir) {
+    const changes = Array.from(
+      editor.querySelectorAll("ins.track-insert, del.track-delete"));
+    if (!changes.length) {
+      setStatus(t("Status.NoTrackedChanges"));
+      return;
+    }
+    // Collapsed caret range at the selection anchor; null when nothing is
+    // selected (next -> first change, prev -> last change).
+    const sel = window.getSelection();
+    let caret = null;
+    if (sel && sel.rangeCount > 0) {
+      caret = sel.getRangeAt(0).cloneRange();
+      caret.collapse(true);
+    }
+    let target = -1;
+    if (dir > 0) {
+      // next: first change whose start is strictly after the caret
+      for (let i = 0; i < changes.length; i++) {
+        const cr = document.createRange();
+        cr.selectNode(changes[i]);
+        if (!caret || caret.compareBoundaryPoints(Range.END_TO_START, cr) < 0) {
+          target = i;
+          break;
+        }
+      }
+      if (target === -1) { setStatus(t("Status.NoNextChange")); return; }
+    } else {
+      // prev: last change whose end is strictly before the caret
+      for (let i = changes.length - 1; i >= 0; i--) {
+        const cr = document.createRange();
+        cr.selectNode(changes[i]);
+        if (!caret || caret.compareBoundaryPoints(Range.START_TO_END, cr) > 0) {
+          target = i;
+          break;
+        }
+      }
+      if (target === -1) { setStatus(t("Status.NoPrevChange")); return; }
+    }
+    const el = changes[target];
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.remove("nav-flash");
+    void el.offsetWidth;  // restart the flash animation
+    el.classList.add("nav-flash");
+    setTimeout(() => el.classList.remove("nav-flash"), 1600);
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    const s = window.getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+    setStatus(dir > 0 ? t("Collab.NextChange") : t("Collab.PrevChange"));
+  }
+  function prevTrackedChange() { navigateTrackedChange(-1); }
+  function nextTrackedChange() { navigateTrackedChange(1); }
 
   function openCommentDialog() {
     if (READ_ONLY) return;
