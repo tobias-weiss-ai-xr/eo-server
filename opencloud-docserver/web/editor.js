@@ -969,6 +969,7 @@
     if (cmd === "inkColor") { setInkColor(); return; }
     if (cmd === "inkThickness") { setInkThickness(); return; }
     if (cmd === "managePlugins") { managePlugins(); return; }
+    if (cmd === "photoEditor") { openPhotoEditorDialog(); return; }
     const isBlock =
       cmd === "formatBlock" && /^(H[1-6]|P)$/i.test(String(value || ""));
     // Font size/family and color have no semantic tags (the sanitizer strips
@@ -1244,7 +1245,7 @@
     lastFocusedEl = null;
     el.focus();
   }
-  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog", "page-setup-dialog", "borders-dialog", "protect-dialog"];
+  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog", "page-setup-dialog", "borders-dialog", "protect-dialog", "photo-editor-dialog"];
   function getOpenDialog() {
     for (let i = 0; i < DIALOG_IDS.length; i++) {
       const d = document.getElementById(DIALOG_IDS[i]);
@@ -4948,6 +4949,107 @@
 
   pollCollab();
   announcePresence();
+
+  // --- photo editor plugin: canvas filter dialog (view-only UI) ------
+  // Decodes a locally picked image into a canvas and previews CSS canvas
+  // filters: brightness/contrast/saturation sliders plus one-shot presets
+  // (grayscale/sepia/invert/blur), reset clears them, close dismisses.
+  // View-only — like #nav-panel it never touches document content or the
+  // converters (no markers, no round-trip).
+  const photoEditorDialog = document.getElementById("photo-editor-dialog");
+  const photoEditorCanvas = document.getElementById("photo-editor-canvas");
+  const photoEditorFile = document.getElementById("photo-editor-file");
+  const photoEditorEmpty = document.getElementById("photo-editor-empty");
+  const photoEditorControls = document.getElementById("photo-editor-controls");
+  const photoEditorBrightness = document.getElementById("photo-editor-brightness");
+  const photoEditorContrast = document.getElementById("photo-editor-contrast");
+  const photoEditorSaturate = document.getElementById("photo-editor-saturate");
+  let photoEditorImage = null; // loaded <img> the canvas is drawn from
+
+  function openPhotoEditorDialog() {
+    if (!photoEditorDialog) return;
+    photoEditorResetFilters();
+    rememberFocus();
+    photoEditorDialog.classList.add("open");
+    if (photoEditorFile) photoEditorFile.focus();
+  }
+  function closePhotoEditorDialog() {
+    if (photoEditorDialog) photoEditorDialog.classList.remove("open");
+    restoreFocus();
+  }
+  // Build the canvas filter string from the sliders + selected preset.
+  // Sliders at their neutral 100 stay out, so an all-default strip is empty.
+  function photoEditorFilterString() {
+    const parts = [];
+    if (photoEditorBrightness && photoEditorBrightness.value !== "100")
+      parts.push("brightness(" + photoEditorBrightness.value + "%)");
+    if (photoEditorContrast && photoEditorContrast.value !== "100")
+      parts.push("contrast(" + photoEditorContrast.value + "%)");
+    if (photoEditorSaturate && photoEditorSaturate.value !== "100")
+      parts.push("saturate(" + photoEditorSaturate.value + "%)");
+    const preset = document.querySelector('input[name="photo-editor-preset"]:checked');
+    if (preset && preset.value) parts.push(preset.value);
+    return parts.join(" ");
+  }
+  // Redraw the loaded image with the current filter string, scaled to fit
+  // the fixed 640x400 preview canvas (which the CSS stretches responsively).
+  function photoEditorDraw() {
+    const ctx = photoEditorCanvas && photoEditorCanvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, photoEditorCanvas.width, photoEditorCanvas.height);
+    if (!photoEditorImage) return;
+    const scale = Math.min(
+      photoEditorCanvas.width / photoEditorImage.naturalWidth,
+      photoEditorCanvas.height / photoEditorImage.naturalHeight, 1);
+    const w = Math.max(1, Math.round(photoEditorImage.naturalWidth * scale));
+    const h = Math.max(1, Math.round(photoEditorImage.naturalHeight * scale));
+    const x = Math.round((photoEditorCanvas.width - w) / 2);
+    const y = Math.round((photoEditorCanvas.height - h) / 2);
+    ctx.filter = photoEditorFilterString();
+    ctx.drawImage(photoEditorImage, x, y, w, h);
+    ctx.filter = "none";
+  }
+  function photoEditorResetFilters() {
+    if (photoEditorBrightness) photoEditorBrightness.value = "100";
+    if (photoEditorContrast) photoEditorContrast.value = "100";
+    if (photoEditorSaturate) photoEditorSaturate.value = "100";
+    const presets = document.querySelectorAll('input[name="photo-editor-preset"]');
+    if (presets.length) presets[0].checked = true;
+    photoEditorDraw();
+  }
+  function onPhotoEditorFileChange() {
+    const file = photoEditorFile && photoEditorFile.files && photoEditorFile.files[0];
+    if (!file || !/^image\//.test(file.type)) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        photoEditorImage = img;
+        if (photoEditorControls) photoEditorControls.hidden = false;
+        if (photoEditorEmpty) photoEditorEmpty.hidden = true;
+        photoEditorResetFilters();
+      };
+      img.src = String(reader.result || "");
+    };
+    reader.readAsDataURL(file);
+  }
+  if (photoEditorFile) photoEditorFile.addEventListener("change", onPhotoEditorFileChange);
+  [photoEditorBrightness, photoEditorContrast, photoEditorSaturate].forEach((el) => {
+    if (el) el.addEventListener("input", photoEditorDraw);
+  });
+  document.querySelectorAll('input[name="photo-editor-preset"]').forEach((el) => {
+    if (el) el.addEventListener("change", photoEditorDraw);
+  });
+  const photoEditorResetBtn = document.getElementById("btn-photo-editor-reset");
+  if (photoEditorResetBtn) photoEditorResetBtn.addEventListener("click", photoEditorResetFilters);
+  const photoEditorCloseBtn = document.getElementById("btn-photo-editor-cancel");
+  if (photoEditorCloseBtn) photoEditorCloseBtn.addEventListener("click", closePhotoEditorDialog);
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && photoEditorDialog && photoEditorDialog.classList.contains("open")) {
+      ev.preventDefault();
+      closePhotoEditorDialog();
+    }
+  });
 
   // --- plugins browser/manager dialogs -------------------------------
   function browsePlugins() {

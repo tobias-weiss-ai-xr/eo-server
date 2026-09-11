@@ -1107,6 +1107,39 @@ main {
   box-sizing: border-box;
 }
 
+/* ---- photo editor plugin dialog (canvas filter preview) ---- */
+.photo-editor-dialog { width: 680px; max-width: 94vw; }
+.photo-editor-canvas-wrap {
+  position: relative;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+#photo-editor-canvas { display: block; width: 100%; height: auto; }
+.photo-editor-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.photo-editor-controls { display: flex; flex-direction: column; gap: 8px; }
+.photo-editor-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 13px;
+  color: var(--text);
+}
+.photo-editor-group input[type="range"] { width: 130px; }
+.photo-editor-group input[type="radio"] { margin-right: 3px; }
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;

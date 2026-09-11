@@ -22,6 +22,11 @@
     }
     .image-error { min-height: 16px; margin-top: 8px; font-size: 12px; color: #f87171; }
 
+    /* Photo editor plugin dialog styles (scoped here; style.css is
+       maintained separately). The file input must be wider than the
+       standard 84px used by the table dialog's number fields. */
+    #photo-editor-dialog .dialog-field input[type="file"] { width: auto; max-width: 240px; }
+
     /* Find-and-replace dialog styles (scoped here; style.css is maintained
        separately). Wider dialog with a query row + step arrows, a
        match-case option, and the counter/status lines. */
@@ -487,7 +492,7 @@
     <button type="button" data-cmd="browsePlugins" data-i18n="Plugins.Browse">Browse plugins</button>
     <button type="button" data-cmd="managePlugins" data-i18n="Plugins.Manage">Manage plugins</button>
     <button type="button" data-stub="plugins.ocr" data-i18n="Plugins.Ocr">OCR</button>
-    <button type="button" data-stub="plugins.photoeditor" data-i18n="Plugins.PhotoEditor">Photo editor</button>
+    <button type="button" data-cmd="photoEditor" data-i18n="Plugins.PhotoEditor">Photo editor</button>
     </div>
     <div class="ribbon-page" data-tab="ai" role="group" aria-label="AI ribbon" data-i18n-aria-label="Tab.AI">
     <button id="btn-ai-review-tab" type="button" data-i18n="AI.ChangesTab">AI changes</button>
@@ -1113,6 +1118,47 @@
     <div id="comments-list" class="review-list"></div>
     <p id="comments-empty" class="review-empty">No comments.</p>
   </aside>
+
+  <!-- Photo editor plugin: canvas filter dialog (plugins.photoeditor).
+       View-only UI — a local image is decoded into a canvas and previewed
+       under CSS canvas filters (brightness/contrast/saturation sliders +
+       one-shot presets, reset/close). Like #nav-panel it never touches
+       document content or the converters. -->
+  <div id="photo-editor-dialog" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="photo-editor-dialog-title">
+    <div class="dialog photo-editor-dialog">
+      <h3 id="photo-editor-dialog-title" data-i18n="Plugins.PhotoEditor">Photo editor</h3>
+      <div class="dialog-field">
+        <label for="photo-editor-file" data-i18n="PhotoEditor.ChooseFile">Image file</label>
+        <input id="photo-editor-file" type="file"
+               accept="image/png,image/jpeg,image/gif,image/bmp,image/webp">
+      </div>
+      <div class="photo-editor-canvas-wrap">
+        <canvas id="photo-editor-canvas" width="640" height="400"></canvas>
+        <p id="photo-editor-empty" class="photo-editor-empty" data-i18n="PhotoEditor.Empty">No image loaded</p>
+      </div>
+      <div id="photo-editor-controls" class="photo-editor-controls" hidden>
+        <div class="photo-editor-group" role="group" aria-label="Color filters">
+          <label for="photo-editor-brightness" data-i18n="PhotoEditor.Brightness">Brightness</label>
+          <input id="photo-editor-brightness" type="range" min="0" max="200" step="5" value="100">
+          <label for="photo-editor-contrast" data-i18n="PhotoEditor.Contrast">Contrast</label>
+          <input id="photo-editor-contrast" type="range" min="0" max="200" step="5" value="100">
+          <label for="photo-editor-saturate" data-i18n="PhotoEditor.Saturation">Saturation</label>
+          <input id="photo-editor-saturate" type="range" min="0" max="200" step="5" value="100">
+        </div>
+        <div class="photo-editor-group" role="group" aria-label="Preset filter">
+          <label><input type="radio" name="photo-editor-preset" value="" checked data-i18n="PhotoEditor.PresetNone"> None</label>
+          <label><input type="radio" name="photo-editor-preset" value="grayscale(1)" data-i18n="PhotoEditor.PresetGrayscale"> Grayscale</label>
+          <label><input type="radio" name="photo-editor-preset" value="sepia(1)" data-i18n="PhotoEditor.PresetSepia"> Sepia</label>
+          <label><input type="radio" name="photo-editor-preset" value="invert(1)" data-i18n="PhotoEditor.PresetInvert"> Invert</label>
+          <label><input type="radio" name="photo-editor-preset" value="blur(3px)" data-i18n="PhotoEditor.PresetBlur"> Blur</label>
+        </div>
+        <div class="dialog-actions">
+          <button id="btn-photo-editor-reset" data-i18n="PhotoEditor.Reset">Reset</button>
+          <button id="btn-photo-editor-cancel" class="primary" data-i18n="PhotoEditor.Close">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
