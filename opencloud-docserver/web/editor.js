@@ -320,6 +320,7 @@
       // Anchor: an empty/blank document still needs a block element so
       // typing produces <p>…</p> (bare text would be lost in DOCX conversion).
       editor.innerHTML = data.html || "<p><br></p>";
+      refreshToc();
       // Fresh load resets the snapshot chain: the loaded state becomes the
       // baseline the Undo/Redo-Kette walks back to.
       undoStack.length = 0;
@@ -923,6 +924,22 @@
     if (cmd === "toggleHyphenation") { toggleSectionMarker("hyphenation", "data-auto=\"1\""); return; }
     if (cmd === "toggleLineNumbers") { toggleSectionMarker("line-numbers", "data-restart=\"eachPage\""); return; }
     if (cmd === "toggleWatermark") { toggleSectionMarker("watermark", "data-text=\"DRAFT\" data-color=\"#C0C0C0\""); return; }
+    if (cmd === "toggleDropcap") { toggleDropcap(); return; }
+    if (cmd === "openBorders") { openBordersDialog(); return; }
+    if (cmd === "multilevel") {
+      editor.focus();
+      const sel = window.getSelection();
+      const sc = sel && sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
+      const li = sc ? (sc.nodeType === 1 ? sc.closest && sc.closest("li") : (sc.parentElement && sc.parentElement.closest("li"))) : null;
+      if (li) { try { document.execCommand("indent"); } catch (err) {} }
+      else { try { document.execCommand("insertOrderedList"); } catch (err) {} }
+      markDirty(); captureHistory(); scheduleCollabSync(); notifyHost("editing");
+      updateActiveStates(); updateUndoRedoState();
+      return;
+    }
+    if (cmd === "insertToF") { insertToFCommand(); return; }
+    if (cmd === "openCrossref") { openCrossrefDialog(); return; }
+    if (cmd === "toggleSameAsPrev") { toggleSameAsPrevCommand(); return; }
     const isBlock =
       cmd === "formatBlock" && /^(H[1-6]|P)$/i.test(String(value || ""));
     // Font size/family and color have no semantic tags (the sanitizer strips
@@ -1198,7 +1215,7 @@
     lastFocusedEl = null;
     el.focus();
   }
-  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog", "page-setup-dialog"];
+  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog", "page-setup-dialog", "borders-dialog"];
   function getOpenDialog() {
     for (let i = 0; i < DIALOG_IDS.length; i++) {
       const d = document.getElementById(DIALOG_IDS[i]);
@@ -3038,17 +3055,27 @@
   // a marker, data-title is what persists).
   function refreshToc() {
     const headings = editor.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    const captions = Array.from(editor.querySelectorAll("figcaption")).map((c) => c.textContent);
     let n = 0;
     editor.querySelectorAll("nav.toc").forEach((nav) => {
       nav.textContent = "";
-      headings.forEach((h) => {
+      const isFigs = nav.getAttribute("data-kind") === "figures";
+      const src = isFigs ? captions : Array.from(headings);
+      src.forEach((entry) => {
         n += 1;
         const a = document.createElement("a");
-        const lvl = parseInt(h.tagName[1], 10);
-        a.className = "toc-l" + lvl;
-        a.href = "#";
-        a.textContent = h.textContent || ("\u00a7" + n);
-        a.addEventListener("click", (e) => { e.preventDefault(); h.scrollIntoView({ block: "center" }); });
+        if (isFigs) {
+          a.className = "toc-fig";
+          a.href = "#";
+          a.textContent = entry || ("\u00a7" + n);
+        } else {
+          const h = entry;
+          const lvl = parseInt(h.tagName[1], 10);
+          a.className = "toc-l" + lvl;
+          a.href = "#";
+          a.textContent = h.textContent || ("\u00a7" + n);
+          a.addEventListener("click", (e) => { e.preventDefault(); h.scrollIntoView({ block: "center" }); });
+        }
         nav.appendChild(a);
       });
     });
@@ -3087,6 +3114,7 @@
       table.parentNode.insertBefore(fig, table);
       fig.appendChild(table);
       fig.appendChild(cap);
+      refreshToc();
     } else {
       document.execCommand("insertHTML", false,
         '<p style="text-align:center"><em>Caption</em></p>');
@@ -3131,6 +3159,131 @@
   function openCompareView() {
     closeAllMenus();
     openVersionHistory();
+  }
+
+  // Drop cap: wrap the paragraph's first character in <span class="dropcap">
+  // (serializes via w:framePr w:dropCap — WS-A byte contract); toggles off.
+  function firstTextNode(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = walker.nextNode())) { if (n.data.trim()) return n; }
+    return null;
+  }
+  function toggleDropcap() {
+    editor.focus();
+    const sel = document.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const sc = sel.getRangeAt(0).startContainer;
+    const p = sc.nodeType === 1
+      ? (sc.closest ? sc.closest("p") : null)
+      : (sc.parentElement && sc.parentElement.closest("p"));
+    if (!p) return;
+    const existing = p.querySelector(":scope > span.dropcap");
+    if (existing) {
+      existing.remove();
+    } else {
+      const tn = firstTextNode(p);
+      if (!tn) return;
+      const ch = tn.data[0];
+      if (!ch || /\s/.test(ch)) return;
+      const span = document.createElement("span");
+      span.className = "dropcap";
+      span.textContent = ch;
+      tn.data = tn.data.slice(1);
+      tn.parentNode.insertBefore(span, tn);
+    }
+    captureHistory();
+    markDirty();
+    scheduleCollabSync();
+    notifyHost("editing");
+    updateActiveStates();
+  }
+
+  // Borders: 4-side box painter for the current paragraph (w:pBdr / ODT
+  // fo:border-* via inline border-* styles — WS-A byte contract).
+  function openBordersDialog() {
+    closeAllMenus();
+    const dialog = document.getElementById("borders-dialog");
+    if (!dialog) return;
+    rememberFocus();
+    dialog.classList.add("open");
+  }
+  function closeBordersDialog() {
+    const dialog = document.getElementById("borders-dialog");
+    if (dialog) dialog.classList.remove("open");
+    restoreFocus();
+  }
+  function confirmBordersDialog() {
+    const dialog = document.getElementById("borders-dialog");
+    const g = (id) => document.getElementById(id);
+    const w = parseFloat((g("bd-width") && g("bd-width").value) || "1") || 1;
+    const color = (g("bd-color") && g("bd-color").value) || "#000000";
+    const sides = ["top", "bottom", "left", "right"].filter(
+      (side) => g("bd-" + side) && g("bd-" + side).checked);
+    if (dialog) dialog.classList.remove("open");
+    restoreFocus();
+    editor.focus();
+    const sel = document.getSelection();
+    if (!sel || !sel.rangeCount || !sides.length) return;
+    const sc = sel.getRangeAt(0).startContainer;
+    const block = sc.nodeType === 1
+      ? (sc.closest ? sc.closest("p") : null)
+      : (sc.parentElement && sc.parentElement.closest("p"));
+    if (!block) return;
+    const setStyle = { "border-top": null, "border-bottom": null, "border-left": null, "border-right": null };
+    sides.forEach((side) => { setStyle["border-" + side] = w + "pt solid " + color; });
+    // keep any existing per-side borders not being edited, drop the ones unchecked
+    const cur = block.getAttribute("style") || "";
+    const next = [];
+    cur.split(";").forEach((decl) => {
+      const kv = decl.split(":");
+      if (kv.length < 2) return;
+      const prop = kv[0].trim();
+      if (setStyle[prop] !== undefined && setStyle[prop] === null) return; // unchecked side removed
+      const idx = next.map((x) => x.split(":")[0]).indexOf(prop);
+      if (idx >= 0) next[idx] = decl.trim();
+      else next.push(decl.trim());
+    });
+    sides.forEach((side) => {
+      const decl = "border-" + side + ":" + setStyle["border-" + side];
+      const prop = "border-" + side;
+      const idx = next.map((x) => x.split(":")[0]).indexOf(prop);
+      if (idx >= 0) next[idx] = decl; else next.push(decl);
+    });
+    if (next.length) block.setAttribute("style", next.join(";"));
+    else block.removeAttribute("style");
+    captureHistory();
+    markDirty();
+    scheduleCollabSync();
+    notifyHost("editing");
+    updateActiveStates();
+  }
+
+  // Table of figures: a toc-marker nav whose live preview lists figcaption
+  // entries (the converter persists it as a plain TOC marker + title).
+  function insertToFCommand() {
+    editor.focus();
+    document.execCommand("insertHTML", false,
+      '<nav class="toc" data-kind="figures" data-title="List of Figures"></nav><p><br></p>');
+    moveCaretPastStructuralMarkers();
+    refreshToc();
+    captureHistory(); markDirty(); scheduleCollabSync(); notifyHost("editing");
+    updateActiveStates(); updateUndoRedoState();
+  }
+  // Header/footer 'same as previous': single-section docs have no previous
+  // section to inherit, so this is a live affordance + attribute only —
+  // serialization is a no-op (ponytail: honest marking, per-section header
+  // linkage is a future iteration).
+  function toggleSameAsPrevCommand() {
+    const hdr = editor.querySelector(":scope > header.page-header, header.page-header");
+    if (!hdr) { setStatus("Same as previous: no header to link"); return; }
+    if (hdr.hasAttribute("data-same-prev")) { hdr.removeAttribute("data-same-prev"); }
+    else { hdr.setAttribute("data-same-prev", "1"); }
+    setStatus(hdr.hasAttribute("data-same-prev")
+      ? "Same as previous (header linked)"
+      : "Same as previous (off)");
+    markDirty(); captureHistory(); scheduleCollabSync(); notifyHost("editing");
+    updateActiveStates();
   }
 
   // --- OO-parity stubs (documented iteration backlog) --------------------
@@ -3190,6 +3343,14 @@
     if (e.key === "Enter") { e.preventDefault(); confirmTocDialog(); }
   });
   // Object dialog
+  const bdOk = document.getElementById("btn-borders-ok");
+  if (bdOk) bdOk.addEventListener("click", confirmBordersDialog);
+  const bdCancel = document.getElementById("btn-borders-cancel");
+  if (bdCancel) bdCancel.addEventListener("click", closeBordersDialog);
+  const bdColor = document.getElementById("bd-color");
+  if (bdColor) bdColor.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); confirmBordersDialog(); }
+  });
   const objOk = document.getElementById("btn-object-ok");
   if (objOk) objOk.addEventListener("click", confirmObjectDialog);
   const objCancel = document.getElementById("btn-object-cancel");

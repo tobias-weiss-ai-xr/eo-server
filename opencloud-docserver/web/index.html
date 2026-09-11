@@ -294,12 +294,12 @@
         <li role="none"><button type="button" role="menuitem" data-picker="highlight-color" data-i18n="Home.Highlight">Highlight color</button></li>
         <li role="none"><button type="button" role="menuitem" data-picker="text-color" data-i18n="Home.FontColor">Font color</button></li>
         <li role="none"><button type="button" role="menuitem" data-picker="shading-color" data-i18n="Home.Shading">Shading</button></li>
-        <li role="none"><button type="button" role="menuitem" data-stub="home.borders" data-i18n="Home.Borders">Borders</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="openBorders" data-i18n="Home.Borders">Borders</button></li>
         <li role="none"><button type="button" role="menuitem" data-cmd="changeCase" data-value="sentence" data-i18n="Home.ChangeCase.Sentence">Sentence case</button></li>
         <li role="none"><button type="button" role="menuitem" data-cmd="changeCase" data-value="lower" data-i18n="Home.ChangeCase.Lower">lowercase</button></li>
         <li role="none"><button type="button" role="menuitem" data-cmd="changeCase" data-value="upper" data-i18n="Home.ChangeCase.Upper">UPPERCASE</button></li>
         <li role="none"><button type="button" role="menuitem" data-cmd="changeCase" data-value="title" data-i18n="Home.ChangeCase.Title">Title Case</button></li>
-        <li role="none"><button type="button" role="menuitem" data-stub="home.multilevel" data-i18n="Home.Multilevel">Multilevel list</button></li>
+        <li role="none"><button type="button" role="menuitem" data-cmd="multilevel" data-i18n="Home.Multilevel">Multilevel list</button></li>
         <li role="none"><button type="button" role="menuitem" data-cmd="fontSizeDec" data-i18n="Home.FontDec">Decrease font</button></li>
         <li role="none"><button type="button" role="menuitem" data-cmd="fontSizeInc" data-i18n="Home.FontInc">Increase font</button></li>
       </ul>
@@ -421,7 +421,7 @@
     <button type="button" data-cmd="insertObject" data-value="shape" data-i18n="Insert.Shape">Shape</button>
     <button type="button" data-cmd="insertObject" data-value="chart" data-i18n="Insert.Chart">Chart</button>
     <button type="button" data-cmd="insertObject" data-value="textart" data-i18n="Insert.TextArt">Text art</button>
-    <button type="button" data-stub="insert.dropcap" data-i18n="Insert.DropCap">Drop cap</button>
+    <button type="button" data-cmd="toggleDropcap" data-i18n="Insert.DropCap">Drop cap</button>
     <button type="button" data-cmd="insertObject" data-value="textbox" data-i18n="Insert.TextBox">Text box</button>
     <button type="button" data-stub="insert.hyperlink" data-i18n="Insert.Hyperlink">Hyperlink</button>
     </div>
@@ -454,7 +454,7 @@
     <button type="button" data-stub="ref.citation" data-i18n="Ref.Citation">Citation</button>
     <button type="button" data-stub="ref.index" data-i18n="Ref.Index">Index</button>
     <button type="button" data-cmd="updateToc" data-i18n="Ref.UpdateToc">Update TOC</button>
-    <button type="button" data-stub="ref.crossref" data-i18n="Ref.Crossref">Cross-reference</button>
+    <button type="button" data-cmd="openCrossref" data-i18n="Ref.Crossref">Cross-reference</button>
     </div>
     <div class="ribbon-page" data-tab="collaboration" role="group" aria-label="Collaboration ribbon" data-i18n-aria-label="Tab.Collaboration">
     <button id="btn-track-changes" title="Track changes" aria-label="Track changes" aria-pressed="false">✎</button>
@@ -502,7 +502,7 @@
     <button type="button" data-stub="hf.odd-even" data-i18n="HF.OddEven">Different Odd &amp; Even</button>
     <button type="button" data-stub="hf.header-from-top" data-i18n="HF.HeaderFromTop">Header from Top</button>
     <button type="button" data-stub="hf.footer-from-bottom" data-i18n="HF.FooterFromBottom">Footer from Bottom</button>
-    <button type="button" data-stub="hf.same-as-prev" data-i18n="HF.SameAsPrev">Same as previous</button>
+    <button type="button" data-cmd="toggleSameAsPrev" data-i18n="HF.SameAsPrev">Same as previous</button>
     </div>
   </header>
 
@@ -787,6 +787,31 @@
       <div class="dialog-actions">
         <button id="btn-toc-cancel">Cancel</button>
         <button id="btn-toc-ok" class="primary">Insert</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Borders dialog (paragraph border painter, home.borders) -->
+  <div id="borders-dialog" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="borders-dialog-title">
+    <div class="dialog">
+      <h3 id="borders-dialog-title" data-i18n="Home.Borders">Borders</h3>
+      <div class="borders-sides" role="group" aria-label="Border sides">
+        <label><input type="checkbox" id="bd-top" checked> Top</label>
+        <label><input type="checkbox" id="bd-bottom" checked> Bottom</label>
+        <label><input type="checkbox" id="bd-left" checked> Left</label>
+        <label><input type="checkbox" id="bd-right" checked> Right</label>
+      </div>
+      <div class="dialog-field">
+        <label for="bd-width">Width (pt)</label>
+        <input id="bd-width" type="number" min="0.5" max="6" step="0.25" value="1">
+      </div>
+      <div class="dialog-field">
+        <label for="bd-color">Color</label>
+        <input id="bd-color" type="color" value="#000000">
+      </div>
+      <div class="dialog-actions">
+        <button id="btn-borders-cancel">Cancel</button>
+        <button id="btn-borders-ok" class="primary">Apply</button>
       </div>
     </div>
   </div>
