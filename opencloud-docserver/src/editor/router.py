@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 import urllib.parse
 from pathlib import Path
@@ -639,6 +640,31 @@ async def restore_document_version(doc_id: str, ts: int, request: Request) -> JS
     except DocumentStoreError as exc:
         return JSONResponse({"error": str(exc)}, status_code=404)
     return JSONResponse({"ok": True, "ts": head_ts})
+
+
+@router.get("/api/documents/{doc_id}/versions/{ts}/content")
+async def version_content(doc_id: str, ts: int, request: Request) -> JSONResponse:
+    """Serve a version's content as plain text (+ html) for the Compare
+    flow (F-103): the editor diffs the current document against this text
+    and renders the delta as tracked changes. Restored by the store on
+    demand (versions are on-disk snapshots)."""
+    if invalid_doc_id(doc_id):
+        return JSONResponse({"error": "Invalid file id"}, status_code=400)
+    if _client(request, doc_id) is not None:
+        return JSONResponse(
+            {"error": "version history is managed by the remote document host"},
+            status_code=400,
+        )
+    store = _store(request)
+    if store.get(doc_id) is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    raw = store.get_version(doc_id, ts)
+    if raw is None:
+        return JSONResponse({"error": "version not found"}, status_code=404)
+    html = docx_to_html(raw) or ""
+    text = re.sub(r"<[^>]+>", " ", html)
+    text = re.sub(r"\s+", " ", text).strip()
+    return JSONResponse({"html": html, "text": text, "ts": ts})
 
 
 @router.put("/api/documents/{doc_id}/contents")

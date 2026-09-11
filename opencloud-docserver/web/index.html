@@ -418,11 +418,11 @@
 <button id="btn-pagenumber" title="Insert page number field" data-i18n-title="Toolbar.PageNumberTitle" aria-label="Insert page number">#</button>
 <button id="btn-header" title="Insert page header" data-i18n-title="Toolbar.HeaderTitle" aria-label="Insert page header">▔</button>
 <button id="btn-footer" title="Insert page footer" data-i18n-title="Toolbar.FooterTitle" aria-label="Insert page footer">▁</button>
-    <button type="button" data-stub="insert.shape" data-i18n="Insert.Shape">Shape</button>
-    <button type="button" data-stub="insert.chart" data-i18n="Insert.Chart">Chart</button>
-    <button type="button" data-stub="insert.textart" data-i18n="Insert.TextArt">Text art</button>
+    <button type="button" data-cmd="insertObject" data-value="shape" data-i18n="Insert.Shape">Shape</button>
+    <button type="button" data-cmd="insertObject" data-value="chart" data-i18n="Insert.Chart">Chart</button>
+    <button type="button" data-cmd="insertObject" data-value="textart" data-i18n="Insert.TextArt">Text art</button>
     <button type="button" data-stub="insert.dropcap" data-i18n="Insert.DropCap">Drop cap</button>
-    <button type="button" data-stub="insert.textbox" data-i18n="Insert.TextBox">Text box</button>
+    <button type="button" data-cmd="insertObject" data-value="textbox" data-i18n="Insert.TextBox">Text box</button>
     <button type="button" data-stub="insert.hyperlink" data-i18n="Insert.Hyperlink">Hyperlink</button>
     </div>
     <!-- OO-parity tab pages. Buttons for features WO lacks carry data-stub="<ref>":
@@ -442,18 +442,18 @@
     <button id="btn-section-break" title="Insert section break" aria-label="Insert section break">⇘</button>
     <button id="btn-columns" title="Insert columns" aria-label="Insert columns">▥</button>
     <button type="button" id="btn-page-setup" data-i18n="Layout.PageSetup">Page setup</button>
-    <button type="button" data-stub="layout.hyphenation" data-i18n="Layout.Hyphenation">Hyphenation</button>
-    <button type="button" data-stub="layout.line-numbers" data-i18n="Layout.LineNumbers">Line numbers</button>
-    <button type="button" data-stub="layout.watermark" data-i18n="Layout.Watermark">Watermark</button>
+    <button type="button" data-cmd="toggleHyphenation" data-i18n="Layout.Hyphenation">Hyphenation</button>
+    <button type="button" data-cmd="toggleLineNumbers" data-i18n="Layout.LineNumbers">Line numbers</button>
+    <button type="button" data-cmd="toggleWatermark" data-i18n="Layout.Watermark">Watermark</button>
     </div>
     <div class="ribbon-page" data-tab="references" role="group" aria-label="References ribbon" data-i18n-aria-label="Tab.References">
     <button id="btn-toc" title="Insert table of contents" aria-label="Insert table of contents">☰</button>
     <button id="btn-footnote" title="Insert footnote" data-i18n-title="Toolbar.FootnoteTitle" aria-label="Insert footnote">¹</button>
     <button id="btn-endnote" title="Insert endnote" data-i18n-title="Toolbar.EndnoteTitle" aria-label="Insert endnote">ⁿ</button>
-    <button type="button" data-stub="ref.caption" data-i18n="Ref.Caption">Caption</button>
+    <button type="button" data-cmd="insertCaption" data-i18n="Ref.Caption">Caption</button>
     <button type="button" data-stub="ref.citation" data-i18n="Ref.Citation">Citation</button>
     <button type="button" data-stub="ref.index" data-i18n="Ref.Index">Index</button>
-    <button type="button" data-stub="ref.update-toc" data-i18n="Ref.UpdateToc">Update TOC</button>
+    <button type="button" data-cmd="updateToc" data-i18n="Ref.UpdateToc">Update TOC</button>
     <button type="button" data-stub="ref.crossref" data-i18n="Ref.Crossref">Cross-reference</button>
     </div>
     <div class="ribbon-page" data-tab="collaboration" role="group" aria-label="Collaboration ribbon" data-i18n-aria-label="Tab.Collaboration">
@@ -462,8 +462,8 @@
     <button id="btn-comment" title="Add comment" aria-label="Add comment"><svg viewBox="0 0 18 14" width="16" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2h14v8h-7.5L5 13v-3H2z"/></svg></button>
     <button id="btn-comments" title="Show comments" aria-label="Show comments">◫</button>
     <button type="button" data-stub="collab.chat" data-i18n="Collab.Chat">Chat</button>
-    <button type="button" data-stub="collab.compare" data-i18n="Collab.Compare">Compare</button>
-    <button type="button" data-stub="collab.display" data-i18n="Collab.Display">Display mode</button>
+    <button type="button" data-cmd="compareVersion" data-i18n="Collab.Compare">Compare</button>
+    <button type="button" data-cmd="displayMode" data-i18n="Collab.Display">Display mode</button>
     <button type="button" data-stub="collab.prev-change" data-i18n="Collab.PrevChange">◀ change</button>
     <button type="button" data-stub="collab.next-change" data-i18n="Collab.NextChange">change ▶</button>
     </div>
@@ -489,7 +489,7 @@
     <div class="ribbon-page" data-tab="ai" role="group" aria-label="AI ribbon" data-i18n-aria-label="Tab.AI">
     <button id="btn-ai-review-tab" type="button" data-i18n="AI.ChangesTab">AI changes</button>
     <button type="button" data-stub="ai.summarize" data-i18n="AI.Summarize">Summarize</button>
-    <button type="button" data-stub="ai.translate" data-i18n="AI.Translate">Translate</button>
+    <button type="button" data-cmd="aiTranslate" data-value="German" data-i18n="AI.Translate">Translate</button>
     <button type="button" data-stub="ai.rewrite" data-i18n="AI.Rewrite">Rewrite</button>
     <button type="button" id="btn-ai-grammar" data-i18n="AI.Grammar">Grammar</button>
     <button type="button" id="btn-ai-assistant" data-i18n="AI.Assistant">AI assistant</button>
@@ -802,6 +802,7 @@
           <option value="textbox">Text box</option>
           <option value="chart">Chart</option>
           <option value="equation">Equation</option>
+          <option value="textart">Text art</option>
         </select>
       </div>
       <div class="dialog-field">

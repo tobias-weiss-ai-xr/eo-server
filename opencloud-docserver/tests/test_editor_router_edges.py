@@ -531,3 +531,30 @@ def test_lock_token_format_contains_timestamp_or_uuid(client):
     # Current implementation: "editor-" + first query param value
     # This test validates the format contract
     assert lock_token.startswith("editor-")
+
+def test_version_content_compare_endpoint(client):
+    """GET /api/documents/{id}/versions/{ts}/content serves text + html for
+    the Compare flow (F-103): current doc, two saves, then diff against
+    the older snapshot."""
+    made = client.post("/api/documents/new", params={"format": "docx"}).json()
+    doc_id = made["doc_id"]
+    h1 = "<p>Alpha line one</p><p>Beta</p>"
+    r = client.post(f"/api/documents/{doc_id}/save", json={"html": h1})
+    assert r.status_code == 200, r.text
+    h2 = "<p>Alpha line one</p><p>Beta</p><p>Gamma added</p>"
+    r = client.post(f"/api/documents/{doc_id}/save", json={"html": h2})
+    assert r.status_code == 200, r.text
+    versions = client.get(f"/api/documents/{doc_id}/versions").json()["versions"]
+    # newest first: [h2 snapshot, h1 snapshot, initial blank]; compare h1.
+    assert len(versions) >= 3
+    older = versions[1]["ts"]
+    res = client.get(f"/api/documents/{doc_id}/versions/{older}/content")
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert "Alpha line one" in data["text"] and "Beta" in data["text"]
+    assert "Gamma added" not in data["text"]
+    assert "<p>Alpha line one</p>" in data["html"]
+    # unknown version is typed, not 500
+    res = client.get(f"/api/documents/{doc_id}/versions/1999-01-01T00:00:00Z/content")
+    assert res.status_code in (400, 404, 422)
+    assert res.status_code != 500

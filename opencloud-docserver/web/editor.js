@@ -910,6 +910,19 @@
     // and record the result as an explicit undo step, because execCommand
     // does not fire an `input` event on every engine. The captureHistory()
     // html===lastSnapshot guard keeps this a no-op when the event already ran.
+    // --- WS-B promoted commands -------------------------------------
+    if (cmd === "insertObject") { openObjectDialog(String(value || "shape")); return; }
+    if (cmd === "updateToc") { refreshToc(); setStatus("TOC updated"); return; }
+    if (cmd === "aiTranslate") {
+      openAiPropose("Translate the document into " + String(value || "German") + ".");
+      return;
+    }
+    if (cmd === "displayMode") { cycleDisplayMode(); return; }
+    if (cmd === "insertCaption") { insertCaptionCommand(); return; }
+    if (cmd === "compareVersion") { openCompareView(); return; }
+    if (cmd === "toggleHyphenation") { toggleSectionMarker("hyphenation", "data-auto=\"1\""); return; }
+    if (cmd === "toggleLineNumbers") { toggleSectionMarker("line-numbers", "data-restart=\"eachPage\""); return; }
+    if (cmd === "toggleWatermark") { toggleSectionMarker("watermark", "data-text=\"DRAFT\" data-color=\"#C0C0C0\""); return; }
     const isBlock =
       cmd === "formatBlock" && /^(H[1-6]|P)$/i.test(String(value || ""));
     // Font size/family and color have no semantic tags (the sanitizer strips
@@ -1693,14 +1706,17 @@
   }
 
   // --- insert object (shape / text box / chart / equation) ----------
-  function openObjectDialog() {
+  function openObjectDialog(preset) {
     if (READ_ONLY) return;
     const dialog = document.getElementById("object-dialog");
     const type = document.getElementById("object-type");
     const label = document.getElementById("object-label");
     const content = document.getElementById("object-content");
     if (!dialog) return;
-    if (type) type.value = "shape";
+    const presets = type ? Array.from(type.options).map((o) => o.value) : [];
+    if (preset && presets.includes(preset)) {
+      if (type) type.value = preset;
+    } else if (type) type.value = "shape";
     if (label) label.value = "";
     if (content) content.value = "";
     rememberFocus();
@@ -2640,12 +2656,21 @@
         badge.textContent = t("VersionHistory.Current");
         item.appendChild(badge);
       } else {
+        const btns = document.createElement("span");
+        btns.className = "version-actions";
+        const cmp = document.createElement("button");
+        cmp.type = "button";
+        cmp.className = "version-compare";
+        cmp.textContent = t("VersionHistory.Compare");
+        cmp.addEventListener("click", () => compareToVersion(v.ts, cmp));
+        btns.appendChild(cmp);
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "version-restore";
         btn.textContent = t("VersionHistory.Restore");
         btn.addEventListener("click", () => restoreVersion(v.ts, btn));
-        item.appendChild(btn);
+        btns.appendChild(btn);
+        item.appendChild(btns);
       }
       versionList.appendChild(item);
     });
@@ -2978,6 +3003,136 @@
     ruler.style.display = hidden ? "" : "none";
     rulerToggle.setAttribute("aria-pressed", String(hidden));
   });
+  // --- promoted section markers / TOC / display / caption / compare ------
+  // Section flag markers (hyphenation / line numbers / watermark) ride at
+  // body start right after any page-setup marker, in the fixed order the
+  // converters strip them in (marker absence = feature off).
+  function sectionMarkerEl(klass) {
+    return Array.from(editor.querySelectorAll(":scope > div"))
+      .find((el) => el.className === klass);
+  }
+  function toggleSectionMarker(klass, attrs) {
+    let m = sectionMarkerEl(klass);
+    if (m) {
+      m.remove();
+    } else {
+      m = document.createElement("div");
+      m.className = klass;
+      attrs.split(/\s+/).forEach((kv) => {
+        const [k, v] = kv.split("=");
+        if (k && v) m.setAttribute(k, v.replace(/"/g, ""));
+      });
+      const ps = sectionMarkerEl("page-setup");
+      const ref = ps ? ps.nextSibling : editor.firstChild;
+      editor.insertBefore(m, ref);
+    }
+    markDirty();
+    captureHistory();
+    scheduleCollabSync();
+    notifyHost("editing");
+    updateActiveStates();
+  }
+
+  // TOC live preview: fill every <nav class="toc"> with links to the
+  // current h1..h6 (the converters strip the children on save — the nav is
+  // a marker, data-title is what persists).
+  function refreshToc() {
+    const headings = editor.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    let n = 0;
+    editor.querySelectorAll("nav.toc").forEach((nav) => {
+      nav.textContent = "";
+      headings.forEach((h) => {
+        n += 1;
+        const a = document.createElement("a");
+        const lvl = parseInt(h.tagName[1], 10);
+        a.className = "toc-l" + lvl;
+        a.href = "#";
+        a.textContent = h.textContent || ("\u00a7" + n);
+        a.addEventListener("click", (e) => { e.preventDefault(); h.scrollIntoView({ block: "center" }); });
+        nav.appendChild(a);
+      });
+    });
+  }
+
+  // View modes Original / Markup / Final: Markup shows both tracked
+  // insertions and deletions (the default; CSS for ins/del applies),
+  // Original hides insertions, Final hides deletions. The class rides on
+  // contentEditable's host so saved HTML is unaffected.
+  const VIEW_MODES = ["markup", "original", "final"];
+  function cycleDisplayMode() {
+    const cur = editor.dataset.viewMode || "markup";
+    const next = VIEW_MODES[(VIEW_MODES.indexOf(cur) + 1) % VIEW_MODES.length];
+    editor.dataset.viewMode = next;
+    setStatus("Display mode: " + next);
+  }
+
+  // Caption: inside a table the caption wraps the table in
+  // <figure><figcaption> (maps to w:tblCaption); elsewhere it drops a
+  // centered caption paragraph (honest L1: plain styled paragraph).
+  function insertCaptionCommand() {
+    editor.focus();
+    const sel = document.getSelection();
+    let cell = null;
+    if (sel && sel.rangeCount) {
+      const node = sel.getRangeAt(0).startContainer;
+      cell = node && node.nodeType === 1
+        ? node.closest("td, th")
+        : node.parentElement && node.parentElement.closest("td, th");
+    }
+    if (cell) {
+      const table = cell.closest("table");
+      const fig = document.createElement("figure");
+      const cap = document.createElement("figcaption");
+      cap.textContent = "Caption";
+      table.parentNode.insertBefore(fig, table);
+      fig.appendChild(table);
+      fig.appendChild(cap);
+    } else {
+      document.execCommand("insertHTML", false,
+        '<p style="text-align:center"><em>Caption</em></p>');
+    }
+    moveCaretPastStructuralMarkers();
+    captureHistory();
+    markDirty();
+    scheduleCollabSync();
+    notifyHost("editing");
+    updateActiveStates();
+  }
+
+  // Compare: opens the version history; each row carries a Compare button
+  // that pulls the version's plain text and applies it as tracked changes
+  // over the current document (F-103 entry point).
+  async function compareToVersion(ts, btn) {
+    if (!btn) return;
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = t("VersionHistory.Comparing");
+    try {
+      const res = await fetch(api("versions/" + encodeURIComponent(ts) + "/content"));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "compare failed");
+      const current = editor.innerText || "";
+      const other = data.text || "";
+      if (current === other) { setStatus(t("VersionHistory.NoDiff")); btn.disabled = false; btn.textContent = label; return; }
+      const ok = applyTrackedDiff(other, current);
+      // applyTrackedDiff(base, next): base=other(version), next=current ->
+      // version-only content wraps as deletions, current-only as insertions.
+      btn.disabled = false;
+      btn.textContent = label;
+      if (ok) setStatus("Compared with version from " + formatVersionDate(ts), false);
+      else setStatus("Compare: range could not be diffed", true);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = label;
+      if (versionError) versionError.textContent = "Compare error: " + err.message;
+      setStatus("Compare error: " + err.message, true);
+    }
+  }
+  function openCompareView() {
+    closeAllMenus();
+    openVersionHistory();
+  }
+
   // --- OO-parity stubs (documented iteration backlog) --------------------
   // Controls for OO features WO has not implemented carry data-stub="<ref>"
   // in index.html. Clicking reports the ref loudly via setStatus — nothing
