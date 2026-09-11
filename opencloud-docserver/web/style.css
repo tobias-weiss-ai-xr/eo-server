@@ -1200,6 +1200,41 @@ section[data-columns] {
   outline-offset: 3px;
   padding: 2px 4px;
 }
+
+/* View tab: page gridlines are a view-only overlay on the paper canvas
+   (toggled by btn-gridlines / toggleGridlines; nothing in the document). */
+#editor.show-gridlines {
+  background-image:
+    linear-gradient(to right, rgba(150,150,175,.30) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(150,150,175,.30) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* View tab: navigation sidebar (document outline). Absolutely positioned
+   in main (already position:relative), left-docked over the canvas. */
+.nav-panel {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 220px;
+  overflow-y: auto;
+  background: #f7f7fb;
+  border-right: 1px solid #ddd;
+  box-shadow: 2px 0 6px rgba(0,0,0,.08);
+  z-index: 40;
+  padding: 8px 4px;
+}
+.nav-panel-title { font-weight: 600; padding: 2px 8px 8px; color: #333; }
+.nav-panel-list { list-style: none; margin: 0; padding: 0; }
+.nav-panel-list a {
+  display: block; text-decoration: none; color: #1a5276;
+  padding: 3px 8px; border-radius: 4px; font-size: .92em;
+}
+.nav-panel-list a:hover { background: #e3eef7; }
+.nav-panel-list a.nav-h2, .nav-panel-list a.nav-h3, .nav-panel-list a.nav-h4,
+.nav-panel-list a.nav-h5, .nav-panel-list a.nav-h6 { margin-left: .9em; }
+.nav-panel-list .nav-empty { padding: 4px 8px; color: #888; font-style: italic; font-size: .9em; }
+@keyframes nav-flash { 0% { background: #ffe9a8; } 100% { background: transparent; } }
+.nav-flash { animation: nav-flash 1.4s ease; }
 nav.toc {
   border: 1px dashed #d99000;
   padding: 6px 10px;

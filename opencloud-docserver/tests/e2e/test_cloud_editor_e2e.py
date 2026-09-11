@@ -1517,3 +1517,105 @@ def test_wsb_compare_versions_tracked_diff(servers):
             browser.close()
 
 
+
+
+def test_r4_view_hyperlink_ai_congruence(servers):
+    """R4 congruence batch: the Insert-tab Hyperlink stub was a duplicate of
+    the real link dialog; view.mode cycles the display modes; Gridlines is a
+    view-only overlay; Navigation lists the document outline and jumps;
+    ai.rewrite/ai.summarize open the propose dialog with preset instructions.
+    All view-state/AI-side effects — no document content, so no save needed."""
+    from playwright.sync_api import sync_playwright
+
+    seed = _seed_doc(servers, "r4.docx", text="Alpha beta gamma delta end.")
+
+    def _bus(frame, cmd, value=None):
+        frame.evaluate(
+            "([c, v]) => dispatchEvent(new CustomEvent('wo-command',"
+            " { detail: { command: c, value: v } }))",
+            [cmd, value],
+        )
+
+    def _html(frame):
+        return frame.evaluate("document.getElementById('editor').innerHTML")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context()
+            parent = ctx.new_page()
+            parent.goto(_parent_url(servers, seed))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "Alpha beta gamma delta end." in _frame_text(frame))
+
+            # Seed an outline for navigation + a target paragraph.
+            frame.evaluate(
+                "(() => { const ed = document.getElementById('editor');"
+                " ed.innerHTML = '<h1>Alpha</h1><p><br></p><h2>Beta</h2>"
+                "<p><br></p><h3>Gamma</h3><p><br></p>'; })()")
+
+            # 1. hyperlink -> the existing link dialog
+            _bus(frame, "link")
+            _wait(lambda: frame.evaluate(
+                "!!document.getElementById('link-dialog')?.classList.contains('open')"))
+            frame.evaluate("(() => {"
+                " const d = document.getElementById('link-dialog');"
+                " if (d) d.classList.remove('open'); })()")
+
+            # 2. view.mode -> display mode cycle (data-view-mode on #editor,
+            #    default "markup" -> "original" -> "final")
+            _bus(frame, "displayMode")
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('editor').dataset.viewMode") == "original")
+            _bus(frame, "displayMode")
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('editor').dataset.viewMode") == "final")
+
+            # 3. gridlines: view-only overlay, toggled from the View tab
+            _open_ribbon_tab(frame, "view")
+            frame.evaluate("document.getElementById('btn-gridlines').click()")
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('editor').classList.contains('show-gridlines')"))
+            assert frame.evaluate(
+                "document.getElementById('btn-gridlines').getAttribute('aria-pressed')") == "true"
+            # state-mirror loop must not clobber a view toggle
+            _bus(frame, "bold")
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('btn-gridlines').getAttribute('aria-pressed')") == "true")
+            frame.evaluate("document.getElementById('btn-gridlines').click()")
+            _wait(lambda: not frame.evaluate(
+                "document.getElementById('editor').classList.contains('show-gridlines')"))
+
+            # 4. navigation sidebar lists the outline; clicking jumps + flashes
+            _bus(frame, "toggleNavigation")
+            _wait(lambda: frame.evaluate(
+                "!document.getElementById('nav-panel').hidden"))
+            outline = frame.evaluate(
+                "[...document.querySelectorAll('#nav-panel .nav-panel-list a')]"
+                ".map(a => a.textContent)")
+            assert outline == ["Alpha", "Beta", "Gamma"], outline
+            frame.evaluate(
+                "document.querySelector('#nav-panel .nav-panel-list a').click()")
+            _wait(lambda: frame.evaluate(
+                "!!document.querySelector('h1.nav-flash')"))
+            _bus(frame, "toggleNavigation")
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('nav-panel').hidden"))
+
+            # 5. ai.rewrite / ai.summarize -> propose dialog with presets
+            _bus(frame, "aiRewrite")
+            _wait(lambda: frame.evaluate(
+                "!!document.getElementById('ai-propose-dialog')?.classList.contains('open')"))
+            task = frame.evaluate(
+                "document.getElementById('ai-propose-instruction').value")
+            assert task.startswith("Rewrite the document"), task
+            frame.evaluate("(() => { const d = document.getElementById('ai-propose-dialog');"
+                           " if (d) d.classList.remove('open'); })()")
+            _bus(frame, "aiSummarize")
+            task = frame.evaluate(
+                "document.getElementById('ai-propose-instruction').value")
+            assert task.startswith("Summarize the document"), task
+        finally:
+            ctx.close()
+            browser.close()

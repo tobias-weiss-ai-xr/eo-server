@@ -423,7 +423,7 @@
     <button type="button" data-cmd="insertObject" data-value="textart" data-i18n="Insert.TextArt">Text art</button>
     <button type="button" data-cmd="toggleDropcap" data-i18n="Insert.DropCap">Drop cap</button>
     <button type="button" data-cmd="insertObject" data-value="textbox" data-i18n="Insert.TextBox">Text box</button>
-    <button type="button" data-stub="insert.hyperlink" data-i18n="Insert.Hyperlink">Hyperlink</button>
+    <button type="button" data-cmd="link" data-i18n="Insert.Hyperlink">Hyperlink</button>
     </div>
     <!-- OO-parity tab pages. Buttons for features WO lacks carry data-stub="<ref>":
          they are LOUD stubs — clicking reports the ref via setStatus — and the
@@ -472,10 +472,13 @@
     <button type="button" data-stub="protect.restrict" data-i18n="Prot.Restrict">Restrict editing</button>
     </div>
     <div class="ribbon-page" data-tab="view" role="group" aria-label="View ribbon" data-i18n-aria-label="Tab.View">
-    <button type="button" data-stub="view.mode" data-i18n="View.Mode">Document view</button>
+    <button type="button" data-cmd="displayMode" data-i18n="View.Mode">Document view</button>
     <button id="btn-ruler-toggle" type="button" data-i18n="View.Ruler" aria-pressed="true">Ruler</button>
-    <button type="button" data-stub="view.gridlines" data-i18n="View.Gridlines">Gridlines</button>
-    <button type="button" data-stub="view.navigation" data-i18n="View.Navigation">Navigation</button>
+    <!-- Gridlines is wired directly (like the ruler toggle) instead of via
+         data-cmd, so the formatting-state mirror loop does not clobber its
+         aria-pressed (a view toggle, not a caret format). -->
+    <button id="btn-gridlines" type="button" data-i18n="View.Gridlines" aria-pressed="false">Gridlines</button>
+    <button id="btn-nav-toggle" type="button" data-cmd="toggleNavigation" data-i18n="View.Navigation" aria-expanded="false">Navigation</button>
     <button id="btn-view-fullscreen" type="button" data-i18n="View.Fullscreen">Fullscreen</button>
     <button id="btn-view-theme" type="button" data-i18n="View.Theme" aria-pressed="false">Theme</button>
     <button id="btn-view-fit" type="button" data-i18n="View.Fit">Fit page</button>
@@ -488,9 +491,9 @@
     </div>
     <div class="ribbon-page" data-tab="ai" role="group" aria-label="AI ribbon" data-i18n-aria-label="Tab.AI">
     <button id="btn-ai-review-tab" type="button" data-i18n="AI.ChangesTab">AI changes</button>
-    <button type="button" data-stub="ai.summarize" data-i18n="AI.Summarize">Summarize</button>
+    <button type="button" data-cmd="aiSummarize" data-i18n="AI.Summarize">Summarize</button>
     <button type="button" data-cmd="aiTranslate" data-value="German" data-i18n="AI.Translate">Translate</button>
-    <button type="button" data-stub="ai.rewrite" data-i18n="AI.Rewrite">Rewrite</button>
+    <button type="button" data-cmd="aiRewrite" data-i18n="AI.Rewrite">Rewrite</button>
     <button type="button" id="btn-ai-grammar" data-i18n="AI.Grammar">Grammar</button>
     <button type="button" id="btn-ai-assistant" data-i18n="AI.Assistant">AI assistant</button>
     </div>
@@ -608,6 +611,11 @@
          role="textbox" aria-multiline="true"
          aria-label="Document" data-i18n-aria-label="A11y.EditorLabel"></div>
   </main>
+  <!-- View-tab navigation sidebar (document outline; view-only). -->
+  <aside id="nav-panel" class="nav-panel" hidden aria-label="Navigation" data-i18n-aria-label="View.Navigation">
+    <div class="nav-panel-title" data-i18n="View.Navigation">Navigation</div>
+    <ul class="nav-panel-list"></ul>
+  </aside>
 
   <!-- Status bar: word/save status left, zoom right (OO-golden layout).
        role=status + aria-live=polite: save/progress/error messages are

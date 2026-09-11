@@ -929,7 +929,18 @@
       openAiPropose("Translate the document into " + String(value || "German") + ".");
       return;
     }
+    if (cmd === "aiRewrite") {
+      openAiPropose("Rewrite the document to improve clarity, flow, and style while preserving its meaning and facts.");
+      return;
+    }
+    if (cmd === "aiSummarize") {
+      openAiPropose("Summarize the document into a concise summary.");
+      return;
+    }
     if (cmd === "displayMode") { cycleDisplayMode(); return; }
+    if (cmd === "link") { insertLink(); return; }
+    if (cmd === "toggleGridlines") { toggleGridlines(); return; }
+    if (cmd === "toggleNavigation") { toggleNavigation(); return; }
     if (cmd === "insertCaption") { insertCaptionCommand(); return; }
     if (cmd === "compareVersion") { openCompareView(); return; }
     if (cmd === "toggleHyphenation") { toggleSectionMarker("hyphenation", "data-auto=\"1\""); return; }
@@ -3021,6 +3032,62 @@
     ruler.style.display = hidden ? "" : "none";
     rulerToggle.setAttribute("aria-pressed", String(hidden));
   });
+  // View tab: page gridlines are a view-only overlay (like the ruler);
+  // nothing enters the document, so no converter contract is involved.
+  function toggleGridlines() {
+    const on = editor.classList.toggle("show-gridlines");
+    const btn = document.getElementById("btn-gridlines");
+    if (btn) btn.setAttribute("aria-pressed", String(on));
+    setStatus(on ? "Gridlines on" : "Gridlines off");
+  }
+  const gridlinesBtn = document.getElementById("btn-gridlines");
+  if (gridlinesBtn) gridlinesBtn.addEventListener("click", toggleGridlines);
+
+  // View tab: navigation sidebar lists the document outline; clicking a
+  // heading scrolls to it and flashes it. View-only UI, rebuilt on open.
+  const navPanel = document.getElementById("nav-panel");
+  const navList = navPanel && navPanel.querySelector(".nav-panel-list");
+  function buildNavigation() {
+    if (!navList) return;
+    navList.textContent = "";
+    const frag = document.createDocumentFragment();
+    editor.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((h) => {
+      const a = document.createElement("a");
+      a.textContent = (h.textContent || "").trim() || "(untitled heading)";
+      a.className = "nav-h" + h.tagName[1];
+      a.href = "#";
+      a.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        h.scrollIntoView({ behavior: "smooth", block: "start" });
+        h.classList.remove("nav-flash");
+        void h.offsetWidth;  // restart the flash animation
+        h.classList.add("nav-flash");
+        setTimeout(() => h.classList.remove("nav-flash"), 1600);
+      });
+      const li = document.createElement("li");
+      li.appendChild(a);
+      frag.appendChild(li);
+    });
+    navList.appendChild(frag);
+  }
+  function toggleNavigation() {
+    if (!navPanel) return;
+    const btn = document.getElementById("btn-nav-toggle");
+    const opening = navPanel.hidden;
+    if (opening) {
+      buildNavigation();
+      if (!navList.childElementCount) {
+        const li = document.createElement("li");
+        li.className = "nav-empty";
+        li.textContent = "No headings in this document";
+        navList.appendChild(li);
+      }
+    }
+    navPanel.hidden = !opening;
+    if (btn) btn.setAttribute("aria-expanded", String(opening));
+    setStatus(opening ? "Navigation open" : "Navigation closed");
+  }
+
   // Multilevel list: nest the current list item under its previous
   // sibling, growing a real <li><ol> subtree (the canonical shape the
   // converters round-trip; Chromium's execCommand("indent") can emit a
