@@ -968,6 +968,7 @@
     if (cmd === "toggleSameAsPrev") { toggleSameAsPrevCommand(); return; }
     if (cmd === "browsePlugins") { browsePlugins(); return; }
     if (cmd === "toggleInk") { toggleInk(value); return; }
+    if (cmd === "inkSelect") { inkSelect(); return; }
     if (cmd === "inkColor") { setInkColor(); return; }
     if (cmd === "inkThickness") { setInkThickness(); return; }
     if (cmd === "managePlugins") { managePlugins(); return; }
@@ -3502,40 +3503,50 @@
   }
 
   // --- Ink canvas drawing (Draw tab) --------------------------------
-  // Minimal OO-parity ink layer: canvas overlay, pen/highlighter/eraser
-  // tools, color picker, thickness picker. Drawing state is ephemeral
-  // (not persisted to DOCX) for this MVP — view-only overlay like the
-  // navigation sidebar. Future: serialize canvas to image or SVG.
+  // OO-parity ink layer: canvas overlay, pen/highlighter/eraser tools,
+  // color/thickness pickers and — WO-FEA-DRAW-2 — stroke select: click a
+  // stroke to select it, drag to move it, Delete/Backspace to remove it.
+  // All strokes live in a registry (inkStrokes) replayed by redrawInk(), so
+  // the eraser is a recorded destination-out pass in the replay, not a
+  // permanent pixel burn. Ink stays ephemeral (not persisted to DOCX) for
+  // this MVP — view-only overlay like the navigation sidebar. Future:
+  // serialize the registry to image or SVG.
   let inkMode = null; // null | "select" | "pen" | "highlighter" | "eraser"
   let inkColor = "#000000";
   let inkThickness = 3;
+  let inkStrokes = []; // completed strokes: {points:[{x,y}], color, thickness, mode}
+  let inkStroke = null; // in-progress stroke (null when not drawing)
+  let selectedInk = -1; // index into inkStrokes of the selected stroke (-1 = none)
+  let selectDrag = null; // {dx,dy} grab offset when moving the selected stroke
   let isDrawing = false;
   const inkCanvas = document.getElementById("ink-canvas");
   const inkCtx = inkCanvas ? inkCanvas.getContext("2d") : null;
 
   function initInkCanvas() {
     if (!inkCanvas || !inkCtx) return;
-    // Set canvas size to match editor on first use
+    // Set canvas size to match editor on first use (resize clears the
+    // canvas, so re-render the stroke registry afterwards).
     const editorRect = editor.getBoundingClientRect();
     inkCanvas.width = editorRect.width;
     inkCanvas.height = editorRect.height;
     inkCanvas.style.width = editorRect.width + "px";
     inkCanvas.style.height = editorRect.height + "px";
-    // Clear canvas
-    inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
     inkCtx.strokeStyle = inkColor;
     inkCtx.lineWidth = inkThickness;
     inkCtx.lineCap = "round";
     inkCtx.lineJoin = "round";
-    // Setup event listeners
-    inkCanvas.addEventListener("mousedown", startDrawing);
-    inkCanvas.addEventListener("mousemove", draw);
-    inkCanvas.addEventListener("mouseup", stopDrawing);
-    inkCanvas.addEventListener("mouseout", stopDrawing);
-    // Touch support
-    inkCanvas.addEventListener("touchstart", handleTouch);
-    inkCanvas.addEventListener("touchmove", handleTouch);
-    inkCanvas.addEventListener("touchend", stopDrawing);
+    redrawInk();
+    // Setup event listeners once (init runs on every mode toggle).
+    if (!inkCanvas.__inkListeners) {
+      inkCanvas.addEventListener("mousedown", startDrawing);
+      inkCanvas.addEventListener("mousemove", draw);
+      inkCanvas.addEventListener("mouseup", stopDrawing);
+      inkCanvas.addEventListener("mouseout", stopDrawing);
+      inkCanvas.addEventListener("touchstart", handleTouch);
+      inkCanvas.addEventListener("touchmove", handleTouch);
+      inkCanvas.addEventListener("touchend", stopDrawing);
+      inkCanvas.__inkListeners = true;
+    }
   }
 
   function handleTouch(e) {
@@ -3559,37 +3570,50 @@
   }
 
   function startDrawing(e) {
-    if (!inkCanvas || !inkCtx || inkMode === "select" || inkMode === null) return;
-    isDrawing = true;
+    if (!inkCanvas || !inkCtx) return;
     const pos = getCanvasPosition(e);
+    if (inkMode === "select") { handleSelectPointer(pos); return; }
+    if (inkMode === null) return;
+    isDrawing = true;
+    inkStroke = { points: [pos], color: inkColor, thickness: inkThickness, mode: inkMode };
     inkCtx.beginPath();
     inkCtx.moveTo(pos.x, pos.y);
     if (inkMode === "eraser") {
-      // Use destination-out compositing for eraser
+      // Destination-out compositing erases what is already on the canvas
+      // (replayed in order on redraw, so selection edits stay consistent).
       inkCtx.globalCompositeOperation = "destination-out";
       inkCtx.strokeStyle = "rgba(0,0,0,1)";
     } else {
       inkCtx.globalCompositeOperation = "source-over";
       inkCtx.strokeStyle = inkColor;
-      if (inkMode === "highlighter") {
-        // Highlighter is semi-transparent
-        inkCtx.globalAlpha = 0.4;
-      } else {
-        inkCtx.globalAlpha = 1.0;
-      }
+      // Highlighter is semi-transparent
+      inkCtx.globalAlpha = inkMode === "highlighter" ? 0.4 : 1.0;
     }
     draw(e);
   }
 
   function draw(e) {
-    if (!isDrawing || !inkCanvas || !inkCtx) return;
+    if (!inkCanvas || !inkCtx) return;
     const pos = getCanvasPosition(e);
+    // Select mode: dragging after a grab moves the selected stroke.
+    if (selectDrag && selectedInk >= 0) {
+      moveSelectedStroke(pos);
+      return;
+    }
+    if (!isDrawing || !inkStroke) return;
+    inkStroke.points.push(pos);
     inkCtx.lineTo(pos.x, pos.y);
     inkCtx.stroke();
   }
 
   function stopDrawing() {
+    selectDrag = null;
+    if (isDrawing && inkStroke && inkStroke.points.length) {
+      inkStrokes.push(inkStroke);
+      redrawInk();
+    }
     isDrawing = false;
+    inkStroke = null;
     if (inkCtx) {
       inkCtx.closePath();
       // Reset compositing
@@ -3599,6 +3623,132 @@
     }
   }
 
+  // Replay the full stroke registry (creation order) so the canvas always
+  // reflects inkStrokes — the single source of truth for select/move/delete.
+  function redrawInk() {
+    if (!inkCanvas || !inkCtx) return;
+    inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
+    inkCtx.lineCap = "round";
+    inkCtx.lineJoin = "round";
+    inkStrokes.forEach((s) => {
+      if (!s.points.length) return;
+      inkCtx.globalCompositeOperation = s.mode === "eraser" ? "destination-out" : "source-over";
+      inkCtx.globalAlpha = s.mode === "highlighter" ? 0.4 : 1.0;
+      inkCtx.strokeStyle = s.mode === "eraser" ? "rgba(0,0,0,1)" : (s.color || inkColor);
+      inkCtx.lineWidth = Math.max(1, s.thickness || 1);
+      inkCtx.beginPath();
+      inkCtx.moveTo(s.points[0].x, s.points[0].y);
+      for (let i = 1; i < s.points.length; i++) inkCtx.lineTo(s.points[i].x, s.points[i].y);
+      inkCtx.stroke();
+    });
+    inkCtx.globalCompositeOperation = "source-over";
+    inkCtx.globalAlpha = 1.0;
+    inkCtx.strokeStyle = inkColor;
+    if (selectedInk >= 0 && selectedInk < inkStrokes.length) drawSelectionBox(selectedInk);
+  }
+
+  // Dashed accent rectangle around the selected stroke's bounds.
+  function drawSelectionBox(idx) {
+    const s = inkStrokes[idx];
+    if (!s || !s.points.length) return;
+    let minX = s.points[0].x, minY = s.points[0].y, maxX = minX, maxY = minY;
+    for (const p of s.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const pad = Math.max(4, s.thickness);
+    const accent = getComputedStyle(document.documentElement)
+      .getPropertyValue("--accent").trim() || "#2563eb";
+    inkCtx.strokeStyle = accent;
+    inkCtx.lineWidth = 1;
+    inkCtx.setLineDash([4, 3]);
+    inkCtx.strokeRect(minX - pad, minY - pad, (maxX - minX) + 2 * pad, (maxY - minY) + 2 * pad);
+    inkCtx.setLineDash([]);
+  }
+
+  // Smallest-axis distance from a point to a segment.
+  function pointSegmentDistance(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const qx = ax + t * dx, qy = ay + t * dy;
+    return Math.hypot(px - qx, py - qy);
+  }
+
+  // Closest stroke within a 12px grab radius, or -1 when clicking empty area.
+  function hitTestStroke(pos) {
+    let best = -1, bestDist = 12;
+    for (let i = 0; i < inkStrokes.length; i++) {
+      const pts = inkStrokes[i].points;
+      const last = pts.length - 1;
+      if (last < 0) continue;
+      for (let k = 0; k < last; k++) {
+        const d = pointSegmentDistance(pos.x, pos.y,
+          pts[k].x, pts[k].y, pts[k + 1].x, pts[k + 1].y);
+        if (d < bestDist) { bestDist = d; best = i; }
+      }
+      // Cover single-point strokes (a click with no drag) via the end point.
+      const dl = Math.hypot(pos.x - pts[last].x, pos.y - pts[last].y);
+      if (dl < bestDist) { bestDist = dl; best = i; }
+    }
+    return best;
+  }
+
+  // Select-mode pointer down: pick a stroke (grab offset for the move) or
+  // clear the selection when clicking empty canvas.
+  function handleSelectPointer(pos) {
+    const idx = hitTestStroke(pos);
+    if (idx < 0) {
+      if (selectedInk >= 0) {
+        selectedInk = -1;
+        redrawInk();
+        setStatus("Ink: selection cleared");
+      }
+      return;
+    }
+    selectedInk = idx;
+    selectDrag = {
+      dx: pos.x - inkStrokes[idx].points[0].x,
+      dy: pos.y - inkStrokes[idx].points[0].y
+    };
+    redrawInk();
+    setStatus(`Ink: stroke ${idx + 1} selected — drag to move, Delete to erase`);
+  }
+
+  // Drag: translate every point of the selected stroke by the grab delta.
+  function moveSelectedStroke(pos) {
+    const s = inkStrokes[selectedInk];
+    if (!s || !s.points.length || !selectDrag) return;
+    const dx = pos.x - selectDrag.dx - s.points[0].x;
+    const dy = pos.y - selectDrag.dy - s.points[0].y;
+    if (dx === 0 && dy === 0) return;
+    for (const p of s.points) { p.x += dx; p.y += dy; }
+    redrawInk();
+  }
+
+  // Delete key (or Backspace): drop the selected stroke from the registry.
+  function deleteSelectedInk() {
+    if (selectedInk < 0 || selectedInk >= inkStrokes.length) return;
+    inkStrokes.splice(selectedInk, 1);
+    selectedInk = -1;
+    redrawInk();
+    setStatus("Ink: selected stroke deleted");
+  }
+
+  function setInkModeOff() {
+    inkMode = null;
+    selectedInk = -1;
+    selectDrag = null;
+    if (inkCanvas) {
+      inkCanvas.hidden = true;
+      inkCanvas.classList.remove("drawing");
+    }
+    setStatus("Ink mode: off");
+  }
+
   function toggleInk(mode) {
     if (!inkCanvas) {
       setStatus("Ink canvas not found", true);
@@ -3606,29 +3756,49 @@
     }
     initInkCanvas();
     // Toggle off if already in the requested mode
-    if (inkMode === mode) {
-      inkMode = null;
-      inkCanvas.hidden = true;
-      inkCanvas.classList.remove("drawing");
-      setStatus("Ink mode: off");
-      return;
-    }
+    if (inkMode === mode) { setInkModeOff(); return; }
     // Switch mode
     inkMode = mode;
+    selectedInk = -1;
+    selectDrag = null;
     inkCanvas.hidden = false;
     inkCanvas.classList.add("drawing");
-    // Update cursor based on mode
-    if (mode === "select") {
-      inkCanvas.style.cursor = "default";
-    } else if (mode === "eraser") {
-      // Eraser cursor: use a simple string without nested quotes
-      inkCanvas.style.cursor = "crosshair";
-      // For better UX, could use CSS class instead
-    } else {
-      inkCanvas.style.cursor = "crosshair";
-    }
+    inkCanvas.style.cursor = "crosshair";
     setStatus(`Ink mode: ${mode}`);
   }
+
+  // Select tool (draw.select): strokes become pickable — click selects,
+  // drag moves, Delete/Backspace deletes, Escape clears the selection.
+  function inkSelect() {
+    if (!inkCanvas) {
+      setStatus("Ink canvas not found", true);
+      return;
+    }
+    initInkCanvas();
+    if (inkMode === "select") { setInkModeOff(); return; }
+    inkMode = "select";
+    selectedInk = -1;
+    selectDrag = null;
+    inkCanvas.hidden = false;
+    inkCanvas.classList.add("drawing");
+    inkCanvas.style.cursor = "default";
+    setStatus("Ink select: click a stroke to select, drag to move, Delete to erase");
+  }
+
+  // Delete/Backspace removes the selected stroke, Escape clears the
+  // selection — both only while a stroke is actually selected in select mode.
+  document.addEventListener("keydown", (ev) => {
+    if (inkMode !== "select" || selectedInk < 0) return;
+    if (ev.key === "Delete" || ev.key === "Backspace") {
+      ev.preventDefault();
+      deleteSelectedInk();
+    } else if (ev.key === "Escape") {
+      ev.preventDefault();
+      selectedInk = -1;
+      redrawInk();
+      setStatus("Ink: selection cleared");
+    }
+  });
 
   function setInkColor() {
     // For now, use a simple color picker dialog or default color
