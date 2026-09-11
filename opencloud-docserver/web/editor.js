@@ -938,6 +938,10 @@
       openAiPropose("Summarize the document into a concise summary.");
       return;
     }
+    if (cmd === "ocrRun") {
+      openAiPropose("Perform OCR on the document, extract all text, and return it as plain text.");
+      return;
+    }
     if (cmd === "displayMode") { cycleDisplayMode(); return; }
     if (cmd === "link") { insertLink(); return; }
     if (cmd === "toggleGridlines") { toggleGridlines(); return; }

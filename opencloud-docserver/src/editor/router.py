@@ -1130,6 +1130,71 @@ async def ai_propose(doc_id: str, request: Request) -> JSONResponse:
 
 
 # ----------------------------------------------------------------------
+# OCR plugin
+# ----------------------------------------------------------------------
+
+@router.post("/api/documents/{doc_id}/ai/ocr")
+async def ocr_document(doc_id: str, request: Request) -> JSONResponse:
+    """Run OCR on the document via the AI propose pipeline.
+
+    The server routes OCR through the MODEL_REGISTRY pattern (see ai.propose):
+    unregistered model → loud 503, not a silent stub. The OCR instruction
+    is passed to the registered model which should extract text and return it.
+    """
+    if invalid_doc_id(doc_id):
+        return JSONResponse({"error": "Invalid file id"}, status_code=400)
+
+    store = _store(request)
+    if store.get(doc_id) is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+
+    session = _session_for(request, doc_id)
+    if session and session.read_only:
+        return JSONResponse(
+            {"error": "read-only: another user is editing this document"},
+            status_code=403,
+        )
+
+    # OCR goes through the same agent tool surface as ai.propose
+    # It uses the model registry; unknown models surface as 503
+    cfg = getattr(request.app.state, "config", None)
+    if cfg is not None and not getattr(cfg, "agents_enabled", True):
+        return JSONResponse({"error": "agents disabled"}, status_code=403)
+
+    hub = get_hub()
+    data = _load_bytes(request, doc_id)
+    if not data:
+        return JSONResponse({"error": "not found"}, status_code=404)
+
+    # Seed the collaboration state with the document baseline
+    hub.ensure(doc_id, _collab_base_text(request, doc_id))
+
+    # OCR instruction for the model
+    instruction = "Perform OCR on the document, extract all text, and return it as plain text."
+
+    # Run OCR through the propose pipeline (uses MODEL_REGISTRY)
+    max_steps = 8
+    max_ops = 30
+
+    ctx = ToolContext(
+        store=store,
+        hub=hub,
+        agents_enabled=True if cfg is None else getattr(cfg, "agents_enabled", True),
+    )
+
+    out = ai_propose_run(
+        ctx, doc_id, instruction,
+        model_name=str(request.query_params.get("model", "default")),
+        max_steps=max_steps, max_ops=max_ops,
+    )
+
+    if not out.get("ok"):
+        return JSONResponse(out, status_code=int(out.get("status", 500)))
+
+    return JSONResponse({"ok": True, **out})
+
+
+# ----------------------------------------------------------------------
 # Plugin registry
 # ----------------------------------------------------------------------
 
