@@ -944,6 +944,8 @@
     if (cmd === "toggleNavigation") { toggleNavigation(); return; }
     if (cmd === "toggleChat") { toggleChat(); return; }
     if (cmd === "insertCaption") { insertCaptionCommand(); return; }
+    if (cmd === "insertCitation") { insertCitation(); return; }
+    if (cmd === "insertIndexEntry") { insertIndexEntry(); return; }
     if (cmd === "compareVersion") { openCompareView(); return; }
     if (cmd === "prevTrackedChange") { prevTrackedChange(); return; }
     if (cmd === "nextTrackedChange") { nextTrackedChange(); return; }
@@ -3335,6 +3337,44 @@
       document.execCommand("insertHTML", false,
         '<p style="text-align:center"><em>Caption</em></p>');
     }
+    moveCaretPastStructuralMarkers();
+    captureHistory();
+    markDirty();
+    scheduleCollabSync();
+    notifyHost("editing");
+    updateActiveStates();
+  }
+
+  function insertCitation() {
+    editor.focus();
+    const sel = document.getSelection();
+    if (sel && sel.rangeCount) {
+      const range = sel.getRangeAt(0);
+      // Insert a citation marker at the cursor position
+      // Pattern: <sup class="ref-citation" data-key="Author2024">[1]</sup>
+      const citationMarker = '<sup class="ref-citation" data-key="">[1]</sup>';
+      document.execCommand("insertHTML", false, citationMarker);
+    }
+    moveCaretPastStructuralMarkers();
+    captureHistory();
+    markDirty();
+    scheduleCollabSync();
+    notifyHost("editing");
+    updateActiveStates();
+  }
+
+  function insertIndexEntry() {
+    editor.focus();
+    const sel = document.getSelection();
+    let selectedText = "";
+    if (sel && sel.rangeCount) {
+      const range = sel.getRangeAt(0);
+      selectedText = range.toString();
+    }
+    // Insert an index entry marker
+    // Pattern: <span class="ref-index" data-entry="term">selected text</span>
+    const indexMarker = `<span class="ref-index">${selectedText || "Index Entry"}</span>`;
+    document.execCommand("insertHTML", false, indexMarker);
     moveCaretPastStructuralMarkers();
     captureHistory();
     markDirty();

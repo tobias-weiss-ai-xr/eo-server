@@ -1776,6 +1776,28 @@ def _run_to_html(run, notes=None) -> str:
                     chunks.append(_wrap_run_text(escape("".join(buf)), run))
                     buf = []
                 chunks.append(marker)
+        elif child.tag == qn("w:fldSimple"):
+            instr = child.get(qn("w:instr")) or ""
+            # Handle L1 field markers: CITATION and XE (index entry)
+            if instr.startswith("CITATION"):
+                # Extract the display text from the child w:t or from the instr
+                text = "".join(t.text or "" for t in child.iter(qn("w:t")))
+                if buf:
+                    chunks.append(_wrap_run_text(escape("".join(buf)), run))
+                    buf = []
+                if text:
+                    # Try to extract the citation number from the text
+                    m = re.match(r"^\s*\[?(\d+)\]?\s*$", text)
+                    citation_num = m.group(1) if m else "1"
+                    chunks.append(f'<sup class="ref-citation">{escape(text)}</sup>')
+            elif instr.startswith("XE"):
+                # Index entry field
+                text = "".join(t.text or "" for t in child.iter(qn("w:t")))
+                if buf:
+                    chunks.append(_wrap_run_text(escape("".join(buf)), run))
+                    buf = []
+                if text:
+                    chunks.append(f'<span class="ref-index">{escape(text)}</span>')
         elif child.tag == qn("w:drawing"):
             img = _drawing_to_img(run, child)
             if img:
@@ -2953,6 +2975,8 @@ class _InlineRunBuilder(HTMLParser):
         self._comment = None    # pending comment span (see handle_starttag)
         self._bookmark = None   # pending bookmark span (see handle_starttag)
         self._track = None      # pending track-change (see handle_starttag)
+        self._citation = None   # pending ref-citation (see _start_citation)
+        self._index_entry = None  # pending ref-index entry (see _start_index)
         self._buf: list[str] = []
 
     def _start_note(self, attrs) -> bool:
@@ -2989,6 +3013,62 @@ class _InlineRunBuilder(HTMLParser):
                 "italic": self._italic > 0,
                 "underline": self._underline > 0,
                 "vert": "sup",
+            })
+
+    def _start_citation(self, attrs) -> bool:
+        """True when attrs mark a ref-citation <sup>. Starts a pending citation
+        marker token."""
+        cls = set((dict(attrs).get("class") or "").split())
+        if "ref-citation" not in cls:
+            return False
+        self._citation = {
+            "key": dict(attrs).get("data-key", ""),
+            "text": "",
+            "token_pos": len(self.tokens),
+        }
+        return True
+
+    def _start_index(self, attrs) -> bool:
+        """True when attrs mark a ref-index <span>. Starts a pending index
+        entry marker token."""
+        cls = set((dict(attrs).get("class") or "").split())
+        if "ref-index" not in cls:
+            return False
+        self._index_entry = {
+            "entry": dict(attrs).get("data-entry", ""),
+            "html": [],
+            "text": "",  # Also store plain text for ODT compatibility
+            "depth": 0,
+            "token_pos": len(self.tokens),
+        }
+        return True
+
+    def _orphan_citation(self) -> None:
+        """Emit a pending ref-citation that had no body as a plain sup."""
+        if self._citation is None:
+            return
+        pos = self._citation["token_pos"]
+        text = self._citation["text"]
+        self._citation = None
+        if text:
+            self.tokens.insert(pos, {
+                "type": "text",
+                "text": text,
+                "vert": "sup",
+            })
+
+    def _orphan_index(self) -> None:
+        """Emit a pending ref-index entry as plain text."""
+        if self._index_entry is None:
+            return
+        pos = self._index_entry["token_pos"]
+        html = "".join(self._index_entry["html"])
+        text = self._index_entry["text"]
+        self._index_entry = None
+        if html or text:
+            self.tokens.insert(pos, {
+                "type": "text",
+                "text": text or _inline_to_text(html),
             })
 
     def handle_starttag(self, tag: str, attrs) -> None:
@@ -3046,6 +3126,22 @@ class _InlineRunBuilder(HTMLParser):
                 "html": [],
                 "depth": 1,
             }
+            return
+        if tag == "sup" and self._start_citation(attrs):
+            # ref-citation: flush any pending text, then start collecting
+            self._flush()
+            return
+        if self._citation is not None:
+            # Already collecting citation text; don't start another marker
+            return
+        if tag == "span" and self._start_index(attrs):
+            # ref-index: flush any pending text, then start collecting
+            self._flush()
+            self._index_entry["depth"] = 1
+            return
+        if self._index_entry is not None:
+            if tag not in _VOID_TAGS:
+                self._index_entry["depth"] += 1
             return
         if self._note is not None and not self._note["in_body"]:
             # An open citation <sup>: the confirming <span class=...> directly
@@ -3193,6 +3289,29 @@ class _InlineRunBuilder(HTMLParser):
                     "html": "".join(bm["html"]),
                 })
             return
+        if self._citation is not None:
+            if tag == "sup":
+                citation = self._citation
+                self._citation = None
+                self.tokens.append({
+                    "type": "ref-citation",
+                    "key": citation["key"],
+                    "text": citation["text"],
+                })
+            return
+        if self._index_entry is not None:
+            if tag == "span":
+                self._index_entry["depth"] = max(0, self._index_entry["depth"] - 1)
+                if self._index_entry["depth"] == 0:
+                    index = self._index_entry
+                    self._index_entry = None
+                    self.tokens.append({
+                        "type": "ref-index",
+                        "entry": index["entry"],
+                        "html": "".join(index["html"]),
+                        "text": index["text"],
+                    })
+            return
         if self._note is not None and self._note["in_body"]:
             if tag not in _VOID_TAGS:
                 self._note["depth"] = max(0, self._note["depth"] - 1)
@@ -3255,6 +3374,13 @@ class _InlineRunBuilder(HTMLParser):
         if self._bookmark is not None:
             self._bookmark["html"].append(escape(data))
             return
+        if self._citation is not None:
+            self._citation["text"] += data
+            return
+        if self._index_entry is not None:
+            self._index_entry["html"].append(escape(data))
+            self._index_entry["text"] += data
+            return
         if (
             self._note is not None
             and not self._note["in_body"]
@@ -3285,6 +3411,10 @@ class _InlineRunBuilder(HTMLParser):
                 "name": bm["name"],
                 "html": "".join(bm["html"]),
             })
+        if self._citation is not None:
+            self._orphan_citation()
+        if self._index_entry is not None:
+            self._orphan_index()
         if self._note is not None:
             if not self._note["in_body"]:
                 self._orphan_note()
@@ -3381,6 +3511,12 @@ def _add_styled_runs(paragraph, html: str) -> None:
         if token["type"] == "bookmark":
             _add_bookmark(paragraph, token)
             continue
+        if token["type"] == "ref-citation":
+            _add_ref_citation(paragraph, token)
+            continue
+        if token["type"] == "ref-index":
+            _add_ref_index(paragraph, token)
+            continue
         run = paragraph.add_run(token["text"])
         if token["bold"]:
             run.bold = True
@@ -3433,6 +3569,46 @@ def _add_bookmark(paragraph, token: dict) -> None:
     end = OxmlElement("w:bookmarkEnd")
     end.set(qn("w:id"), str(bid))
     paragraph._p.append(end)
+
+
+def _add_ref_citation(paragraph, token: dict) -> None:
+    """Insert a reference citation as a CITATION field.
+
+    L1 implementation: emits a w:fldSimple with w:instr="CITATION ..."
+    inside a run to survive round-trip. The display text is stored as 
+    the citation text.
+    """
+    text = token.get("text") or "[1]"
+    # Create a run with the field inside
+    run = paragraph.add_run()
+    fld = OxmlElement("w:fldSimple")
+    fld.set(qn("w:instr"), f"CITATION {token.get('key', '')}")
+    r = OxmlElement("w:r")
+    t = OxmlElement("w:t")
+    t.text = text
+    r.append(t)
+    fld.append(r)
+    run._r.append(fld)
+
+
+def _add_ref_index(paragraph, token: dict) -> None:
+    """Insert an index entry as an XE field.
+
+    L1 implementation: emits a w:fldSimple with w:instr="XE ..." to survive
+    round-trip. The entry text is the content.
+    """
+    html = token.get("html") or ""
+    text = _inline_to_text(html) or token.get("entry") or "Index Entry"
+    # Create a run with the field inside
+    run = paragraph.add_run()
+    fld = OxmlElement("w:fldSimple")
+    fld.set(qn("w:instr"), f"XE \"{text}\"")
+    r = OxmlElement("w:r")
+    t = OxmlElement("w:t")
+    t.text = text
+    r.append(t)
+    fld.append(r)
+    run._r.append(fld)
 
 
 def _add_hyperlink(paragraph, token: dict) -> None:
