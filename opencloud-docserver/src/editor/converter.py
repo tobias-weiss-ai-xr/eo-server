@@ -806,6 +806,11 @@ def _docx_to_html(data: bytes) -> str:
         m = re.match(r"^<li[^>]*>(.*)</li>\s*$", frag, re.S)
         return m.group(1) if m else frag
 
+    # Watermark extraction must run BEFORE header_html: it may strip a
+    # watermark paragraph from the header part (the doc is from bytes, so
+    # mutating it here is safe).
+    wm_marker = _watermark_marker_from_docx(doc)
+
     # Extract header content if present
     header_html = ""
     header_part = _find_header_part(doc)
@@ -857,8 +862,14 @@ def _docx_to_html(data: bytes) -> str:
     for table in doc.tables:
         parts.append(_table_to_html(table, notes))
 
-    # Build the final HTML with header/footer
-    html_parts = [_page_setup_marker_from_docx(doc)]
+    # Build the final HTML with header/footer. Section flag markers
+    # (hyphenation / line numbers / watermark) ride at body start, before
+    # the header, in the fixed order html_to_docx strips them in.
+    html_parts = [p for p in [
+        _page_setup_marker_from_docx(doc),
+        _section_flags_marker_from_docx(doc),
+        wm_marker,
+    ] if p]
     if header_html:
         html_parts.append(f'<header class="page-header">{header_html}</header>')
     html_parts.extend(parts)
@@ -1150,7 +1161,15 @@ def _add_header(doc, content_html: str) -> None:
     # Parse the header content and add runs
     # Each <p> becomes a paragraph in the header
     for p_match in re.finditer(r'<p([^>]*)>(.*?)</p>', content_html, re.S | re.I):
+        p_attrs = p_match.group(1)
         p_inner = p_match.group(2)
+
+        # Paragraph alignment (the watermark fold emits text-align:center).
+        pst = re.search(r'style="([^"]*)"', p_attrs)
+        if pst and "text-align:center" in pst.group(1):
+            jc = OxmlElement("w:jc")
+            jc.set(qn("w:val"), "center")
+            header_para._p.get_or_add_pPr().append(jc)
 
         # Add the paragraph with header style
         # Create a run with the header text and any page number fields
@@ -1189,11 +1208,44 @@ def _add_footer(doc, content_html: str) -> None:
 def _add_header_footer_runs_to_paragraph(para, content_html: str) -> None:
     """Add runs to a header/footer paragraph from HTML content.
 
-    Handles page number fields (<span class="page-number">) specially.
+    Handles page number fields (<span class="page-number">) specially and
+    applies inline ``<span style="font-size/color/font-weight">`` styling
+    (the watermark fold depends on the run rPr signature).
     """
+    def _decorate(run, style: str) -> None:
+        rpr = run._r.get_or_add_rPr()
+        fsz = re.search(r"font-size:(\d+(?:\.\d+)?)pt", style)
+        if fsz:
+            sz = OxmlElement("w:sz")
+            sz.set(qn("w:val"), str(int(round(float(fsz.group(1)) * 2))))
+            rpr.append(sz)
+            szcs = OxmlElement("w:szCs")
+            szcs.set(qn("w:val"), str(int(round(float(fsz.group(1)) * 2))))
+            rpr.append(szcs)
+        col = re.search(r"color:#([0-9a-fA-F]{6})", style)
+        if col:
+            c = OxmlElement("w:color")
+            c.set(qn("w:val"), col.group(1).upper())
+            rpr.append(c)
+        if "font-weight:bold" in style:
+            rpr.append(OxmlElement("w:b"))
+            rpr.append(OxmlElement("w:bCs"))
+
     # Process the content, splitting into text and page-number markers
     pos = 0
     while pos < len(content_html):
+        # Check for a styled span (e.g. the watermark paragraph)
+        span_m = re.match(r'<span\s+style="([^"]*)"[^>]*>', content_html[pos:], re.I)
+        if span_m and ">" in content_html[pos:]:
+            text = span_m.group(0)
+            inner_start = pos + len(text)
+            inner_end = content_html.find("</span>", inner_start)
+            if inner_end != -1:
+                inner = content_html[inner_start:inner_end]
+                run = para.add_run(re.sub(r"<[^>]+>", "", inner))
+                _decorate(run, span_m.group(1))
+                pos = inner_end + len("</span>")
+                continue
         # Check for page number span
         pn_match = re.match(r'<span\s+class="page-number"[^>]*></span>', content_html[pos:], re.I | re.S)
         if pn_match:
@@ -1299,6 +1351,21 @@ def _para_style_parts(para) -> list[str]:
             styles.append("direction:rtl")
         if ppr.find(qn("w:pageBreakBefore")) is not None:
             styles.append("page-break-before:always")
+        pbdr = ppr.find(qn("w:pBdr"))
+        if pbdr is not None:
+            bcss: list[str] = []
+            for side in ("top", "left", "bottom", "right"):
+                el = pbdr.find(qn(f"w:{side}"))
+                if el is None:
+                    continue
+                sz = el.get(qn("w:sz"))
+                color = el.get(qn("w:color"))
+                if not sz or not color:
+                    continue
+                bcss.append(
+                    f"border-{side}:{int(sz) / 8:g}pt solid #{color.lower()}")
+            if bcss:
+                styles.append(";".join(bcss))
     except Exception:
         pass
     return styles
@@ -1318,6 +1385,21 @@ def _parse_len_pt(val: str) -> float | None:
     elif unit == "cm":
         num *= 28.3465
     return num
+
+
+_BORDER_RE = re.compile(
+    r"^\s*(\d+(?:\.\d+)?)\s*(pt|px)?\s*solid\s*#([0-9a-fA-F]{6})\s*$")
+
+
+def _normalize_border(val: str) -> str | None:
+    """'1.5pt solid #ff0000' / '2px solid #000' -> 'Npt solid #RRGGBB'."""
+    m = _BORDER_RE.match(val)
+    if not m:
+        return None
+    n = float(m.group(1))
+    if (m.group(2) or "pt") == "px":
+        n *= 0.75
+    return f"{n:g}pt solid #{m.group(3).lower()}"
 
 
 def _parse_para_props(open_tag: str) -> dict:
@@ -1353,7 +1435,92 @@ def _parse_para_props(open_tag: str) -> dict:
             props["page_break_before"] = True
         elif prop == "text-align" and val in ("center", "right"):
             props["text-align"] = val
+        elif prop == "border" or prop.startswith("border-"):
+            side = "all" if prop == "border" else prop.split("-", 1)[1]
+            if side not in ("top", "right", "bottom", "left", "all"):
+                continue
+            b = _normalize_border(val)
+            if b:
+                props.setdefault("borders", {})[side] = b
     return props
+
+
+def _apply_para_borders(p, borders: dict) -> None:
+    """Write w:pBdr from a {side: 'Npt solid #hex'} map (side 'all' fans out)."""
+    try:
+        ppr = p._p.get_or_add_pPr()
+    except Exception:
+        return
+    allb = borders.get("all")
+    pbdr = OxmlElement("w:pBdr")
+    for side in ("top", "left", "bottom", "right"):
+        val = borders.get(side) or allb
+        if not val:
+            continue
+        m = re.match(r"^(\d+(?:\.\d+)?)pt\s+solid\s+#([0-9a-fA-F]{6})$", val)
+        if not m:
+            continue
+        el = OxmlElement(f"w:{side}")
+        el.set(qn("w:val"), "single")
+        el.set(qn("w:sz"), str(int(round(float(m.group(1)) * 8))))
+        el.set(qn("w:space"), "0")
+        el.set(qn("w:color"), m.group(2).upper())
+        pbdr.append(el)
+    if not len(pbdr):
+        return
+    shd = ppr.find(qn("w:shd"))
+    tabs = ppr.find(qn("w:tabs"))
+    if shd is not None:
+        shd.addprevious(pbdr)
+    elif tabs is not None:
+        tabs.addprevious(pbdr)
+    else:
+        ppr.append(pbdr)
+
+
+def _set_dropcap(p) -> None:
+    """Mark a paragraph as a three-line drop cap (w:framePr w:dropCap)."""
+    try:
+        ppr = p._p.get_or_add_pPr()
+    except Exception:
+        return
+    fp = OxmlElement("w:framePr")
+    fp.set(qn("w:dropCap"), "drop")
+    fp.set(qn("w:lines"), "3")
+    fp.set(qn("w:wrap"), "around")
+    fp.set(qn("w:w"), "480")
+    fp.set(qn("w:h"), "480")
+    pstyle = ppr.find(qn("w:pStyle"))
+    if pstyle is not None:
+        pstyle.addnext(fp)
+    else:
+        ppr.insert(0, fp)
+
+
+_DROPCAP_SPAN_RE = re.compile(r'<span class="dropcap"[^>]*>([^<]*)</span>')
+
+
+def _strip_dropcap(p, inline_html: str) -> str:
+    """If *inline_html* starts with a dropcap span, apply framePr and
+    return the remaining runs; otherwise unchanged."""
+    m = _DROPCAP_SPAN_RE.match(inline_html)
+    if not m:
+        return inline_html
+    _set_dropcap(p)
+    # Keep the drop-cap letter as the paragraph's first text (Word keeps it
+    # in the body; framePr just makes it span the lines).
+    return m.group(1) + inline_html[m.end():]
+
+
+def _has_dropcap(para) -> bool:
+    try:
+        ppr = para._p.pPr
+    except Exception:
+        return False
+    if ppr is None:
+        return False
+    fp = ppr.find(qn("w:framePr"))
+    return fp is not None and (fp.get(qn("w:dropCap")) or "").lower() == "drop"
 
 
 def _apply_para_props(p, props: dict) -> None:
@@ -1387,6 +1554,8 @@ def _apply_para_props(p, props: dict) -> None:
             ppr.append(OxmlElement("w:pageBreakBefore"))
     except Exception:
         pass
+    if props.get("borders"):
+        _apply_para_borders(p, props["borders"])
 
 
 def _paragraph_to_html(para, notes=None, comments=None) -> tuple[str | None, str | None, int | None]:
@@ -1400,6 +1569,15 @@ def _paragraph_to_html(para, notes=None, comments=None) -> tuple[str | None, str
     """
     style = (para.style.name or "").lower()
     text = _paragraph_inline(para, notes, comments)
+
+    # Drop cap: a paragraph whose w:framePr carries w:dropCap wraps its
+    # first character in <span class="dropcap"> (the writer side strips
+    # the same wrapping on the way in).
+    if _has_dropcap(para) and text:
+        m = re.match(r"(?:<[^>]+>)*?([^\s<])", text)
+        if m:
+            text = (text[:m.start(1)] + '<span class="dropcap">'
+                    + m.group(1) + "</span>" + text[m.end(1):])
 
     # Horizontal rule: an empty paragraph with a bottom border renders as <hr/>.
     if _para_has_bottom_border(para) and not text.strip():
@@ -2281,6 +2459,168 @@ def _apply_page_setup_marker(attrs: str, section) -> None:
             setattr(section, prop, emu(attr))
 
 
+# ── section flag markers (hyphenation / line numbers / watermark) ──────
+# Same doctrine as the page-setup marker: the marker rides at body start,
+# is read/written by the converters, and is stripped from the rendered
+# body. Marker present IFF the feature is on — absence means the default
+# (off), so marker-free documents stay byte-stable.
+_HYPHENATION_RE = re.compile(
+    r'\s*<div\s+class="hyphenation"([^>]*)>\s*</div>', re.I)
+_LINE_NUMBERS_RE = re.compile(
+    r'\s*<div\s+class="line-numbers"([^>]*)>\s*</div>', re.I)
+_WATERMARK_RE = re.compile(
+    r'\s*<div\s+class="watermark"([^>]*)>\s*</div>', re.I)
+
+
+def _section_flags_marker_from_docx(doc) -> str:
+    """hyphenation + line-numbers markers from settings.xml/sectPr. '' when
+    both features are off."""
+    out: list[str] = []
+    try:
+        settings_el = getattr(doc.settings, "element", None)
+        if settings_el is not None:
+            hy = settings_el.find(qn("w:autoHyphenation"))
+            if hy is not None:
+                val = (hy.get(qn("w:val")) or "").lower()
+                if val in ("", "1", "true", "on"):
+                    out.append('<div class="hyphenation" data-auto="1"></div>')
+    except Exception:
+        pass
+    try:
+        sectPr = doc.sections[0]._sectPr
+        if sectPr is not None:
+            ln = sectPr.find(qn("w:lnNumType"))
+            if ln is not None:
+                attrs = ""
+                restart = ln.get(qn("w:restart"))
+                dist = ln.get(qn("w:distance"))
+                if restart:
+                    attrs += f' data-restart="{escape(restart)}"'
+                if dist:
+                    attrs += f' data-distance="{escape(dist)}"'
+                out.append(f'<div class="line-numbers"{attrs}></div>')
+    except Exception:
+        pass
+    return "".join(out)
+
+
+WM_CENTER_SZ = 64  # half-points; a watermark paragraph is >=32pt centered
+
+
+def _is_watermark_paragraph(p) -> bool:
+    """True when *p* looks like a watermark we wrote: single centered run,
+    bold, >=32pt, gray — the L1 signature (heuristic, documented)."""
+    try:
+        runs = p.findall(qn("w:r"))
+        if len(runs) != 1:
+            return False
+        rpr = runs[0].find(qn("w:rPr"))
+        sz = color = ""
+        bold = False
+        if rpr is not None:
+            s = rpr.find(qn("w:sz"))
+            sz = s.get(qn("w:val")) if s is not None else ""
+            c = rpr.find(qn("w:color"))
+            color = c.get(qn("w:val")) if c is not None else ""
+            b = rpr.find(qn("w:b"))
+            bold = b is not None and (b.get(qn("w:val")) or "1").lower() not in ("0", "false", "off")
+        ppr = p.find(qn("w:pPr"))
+        centered = False
+        if ppr is not None:
+            jc = ppr.find(qn("w:jc"))
+            centered = jc is not None and (jc.get(qn("w:val")) or "").lower() == "center"
+        try:
+            big = int(sz) >= WM_CENTER_SZ if sz else False
+        except ValueError:
+            big = False
+        gray = color == "" or int(color, 16) >> 16 == int(color, 16) & 255 == \
+            (int(color, 16) >> 8) & 255  # R == G == B
+        return bool(bold and big and centered and gray)
+    except Exception:
+        return False
+
+
+def _watermark_marker_from_docx(doc) -> str:
+    """Extract a watermark from the document header and strip it from the
+    header part (read path is allowed to mutate — the doc is from bytes)."""
+    try:
+        part = _find_header_part(doc)
+        if part is None:
+            return ""
+        hdr = part._element
+        for p in list(hdr.findall(qn("w:p"))):
+            if not _is_watermark_paragraph(p):
+                continue
+            txt = "".join(
+                (r.find(qn("w:t")).text or "")
+                for r in p.findall(qn("w:r"))
+                if r.find(qn("w:t")) is not None)
+            rpr = p.findall(qn("w:r"))[0].find(qn("w:rPr"))
+            color = ""
+            if rpr is not None:
+                c = rpr.find(qn("w:color"))
+                color = c.get(qn("w:val")) if c is not None else ""
+            marker = f'<div class="watermark" data-text="{escape(txt.strip())}"'
+            if color:
+                marker += f' data-color="#{color.lower()}"'
+            marker += "></div>"
+            hdr.remove(p)
+            return marker
+    except Exception:
+        pass
+    return ""
+
+
+def _watermark_paragraph_html(attrs: str) -> str:
+    """The header-paragraph HTML a watermark marker maps to (and back)."""
+    text = re.search(r'data-text="([^"]*)"', attrs)
+    color = re.search(r'data-color="([^"]*)"', attrs)
+    t = text.group(1) if text else "DRAFT"
+    c = color.group(1) if color else "#C0C0C0"
+    # Align on the <p>, the run styles on an inner <span> (the header run
+    # filler maps those onto the w:rPr — the watermark signature).
+    return (f'<p style="text-align:center"><span style="font-size:32pt;'
+            f'color:{c};font-weight:bold">{escape(t)}</span></p>')
+
+
+def _apply_section_flags(hy_attrs: str | None, ln_attrs: str | None, doc) -> None:
+    """Apply hyphenation (settings.xml) + line numbers (sectPr) markers."""
+    if hy_attrs is not None:
+        try:
+            settings_el = getattr(doc.settings, "element", None)
+            if settings_el is not None and settings_el.find(qn("w:autoHyphenation")) is None:
+                el = OxmlElement("w:autoHyphenation")
+                el.set(qn("w:val"), "true")
+                settings_el.append(el)
+        except Exception:
+            pass
+    if ln_attrs is not None:
+        try:
+            sectPr = doc.sections[0]._sectPr
+            if sectPr is not None:
+                el = sectPr.find(qn("w:lnNumType"))
+                if el is None:
+                    el = OxmlElement("w:lnNumType")
+                    anchor = (sectPr.find(qn("w:docGrid"))
+                              or sectPr.find(qn("w:cols"))
+                              or sectPr.find(qn("w:pgNumType")))
+                    if anchor is not None:
+                        anchor.addprevious(el)
+                    else:
+                        sectPr.append(el)
+                restart = re.search(r'data-restart="([^"]*)"', ln_attrs)
+                if restart:
+                    el.set(qn("w:restart"), restart.group(1))
+                dist = re.search(r'data-distance="([^"]*)"', ln_attrs)
+                if dist:
+                    el.set(qn("w:distance"), dist.group(1))
+        except Exception:
+            pass
+
+
+_DROP_CAP_RE = re.compile(r'^<span class="dropcap">([^<]*)</span>', re.I)
+
+
 def html_to_docx(html_fragment: str) -> bytes:
     """Convert an HTML fragment into DOCX bytes."""
     # A <section data-columns> wrapper carries section-column layout
@@ -2304,6 +2644,22 @@ def html_to_docx(html_fragment: str) -> bytes:
     ps_attrs = ps_m.group(1) if ps_m else None
     if ps_m:
         html_fragment = html_fragment[ps_m.end():]
+    # Section flag markers (hyphenation / line numbers / watermark) ride
+    # at body start in the same fixed order the reader emits them.
+    hy_attrs = ln_attrs = wm_attrs = None
+    for marker, holder in ((_HYPHENATION_RE, "hy"),
+                           (_LINE_NUMBERS_RE, "ln"),
+                           (_WATERMARK_RE, "wm")):
+        m = marker.match(html_fragment)
+        if not m:
+            continue
+        if holder == "hy":
+            hy_attrs = m.group(1)
+        elif holder == "ln":
+            ln_attrs = m.group(1)
+        else:
+            wm_attrs = m.group(1)
+        html_fragment = html_fragment[m.end():]
     # Split tables out; python-docx tables and paragraphs share the body
     # but order interleaving is complex — append tables at the end.
     tables_html = _TAG_TABLE.findall(html_fragment)
@@ -2329,6 +2685,30 @@ def html_to_docx(html_fragment: str) -> bytes:
             cols_el.set(qn("w:space"), str(int(section_gap * 15)))
         else:
             cols_el.attrib.pop(qn("w:space"), None)
+
+    # Apply the section flag markers (hyphenation in settings.xml / line
+    # numbers in sectPr; page geometry was applied above).
+    if hy_attrs is not None or ln_attrs is not None:
+        try:
+            _apply_section_flags(hy_attrs, ln_attrs, doc)
+        except Exception:
+            pass  # a malformed marker degrades to the defaults
+    # The watermark marker rides the document header: fold its paragraph
+    # into the header content (creating a header if none was supplied).
+    # The color is validated so hostile data can't smuggle raw CSS through.
+    if wm_attrs is not None and re.search(r'data-color="#[0-9a-fA-F]{6}"', wm_attrs):
+        try:
+            wm_par = _watermark_paragraph_html(wm_attrs)
+        except Exception:
+            wm_par = None
+        if wm_par:
+            hdr_has = re.search(r'<header([^>]*)>(.*?)</header>', body, re.S | re.I)
+            if hdr_has:
+                body = (body[:hdr_has.start()]
+                        + f'<header{hdr_has.group(1)}>{wm_par}{hdr_has.group(2)}</header>'
+                        + body[hdr_has.end():])
+            else:
+                body = f'<header>{wm_par}</header>' + body
 
     # Extract header and footer if present
     header_content = None
@@ -2390,13 +2770,13 @@ def html_to_docx(html_fragment: str) -> bytes:
             # it to a left-indented paragraph (the HTML contract for indent).
             p = doc.add_paragraph("")
             _apply_para_props(p, {"margin-left": 24.0})
-            _add_styled_runs(p, op[2])
+            _add_styled_runs(p, _strip_dropcap(p, op[2]))
             continue
         if kind == "h":
             props = _parse_para_props(op[2])
             p = doc.add_heading("", level=op[1])
             _apply_para_props(p, props)
-            _add_styled_runs(p, op[3])
+            _add_styled_runs(p, _strip_dropcap(p, op[3]))
             continue
         # paragraph
         props = _parse_para_props(op[1])
@@ -2406,7 +2786,7 @@ def html_to_docx(html_fragment: str) -> bytes:
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         elif props.get("text-align") == "right":
             p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        _add_styled_runs(p, op[2])
+        _add_styled_runs(p, _strip_dropcap(p, op[2]))
 
     # Tag-less input (e.g. raw text typed into an empty contenteditable):
     # keep it as a single paragraph instead of dropping it silently.

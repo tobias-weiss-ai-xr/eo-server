@@ -82,6 +82,10 @@ from src.editor.converter import (
     _parse_border,
     _tokenize_body,
     _twips_attr,
+    _HYPHENATION_RE,
+    _LINE_NUMBERS_RE,
+    _WATERMARK_RE,
+    _watermark_paragraph_html as _watermark_paragraph_html_shared,
 )
 
 _BOLD_WEIGHTS = {"bold", "bolder", "600", "700", "800", "900"}
@@ -580,6 +584,10 @@ def _para_css(props: dict) -> list[str]:
     mode = props.get("writingmode")
     if mode and mode.lower() in ("rtl", "rl", "rl-tb"):
         css.append("direction:rtl")
+    for side in ("top", "left", "bottom", "right"):
+        v = props.get(f"border{side}")
+        if v:
+            css.append(f"border-{side}:{v}")
     if (props.get("breakbefore") or "").lower() == "page":
         css.append("page-break-before:always")
     return css
@@ -628,15 +636,32 @@ def _odt_to_html(data: bytes) -> str:
     footer_html = ""
 
     # Find the master page in styles.xml
+    wm_marker = ""
     for root in (doc.styles, doc.masterstyles, doc.automaticstyles):
         for child in root.childNodes:
             if child.qname == (STYLENS, "master-page"):
                 # Extract header content
                 for subchild in child.childNodes:
                     if subchild.qname == (STYLENS, "header"):
+                        # Watermark: a header paragraph styled WO_Watermark
+                        # is the ODT projection of the watermark marker;
+                        # its text becomes the marker and the header
+                        # renderer skips the paragraph (private style name,
+                        # so no legitimate user paragraph collides).
+                        for p in [c for c in subchild.childNodes
+                                  if c.qname == (TEXTNS, "p")]:
+                            if p.getAttribute("stylename") == "WO_Watermark":
+                                from odf import teletype
+                                wm_txt = teletype.extractText(p).strip()
+                                wm_marker = (
+                                    f'<div class="watermark"'
+                                    f' data-text="{escape(wm_txt)}"></div>')
                         header_html = _master_page_section_to_html(subchild, resolve, pictures)
                     elif subchild.qname == (STYLENS, "footer"):
                         footer_html = _master_page_section_to_html(subchild, resolve, pictures)
+
+    if wm_marker:
+        pass
 
     parts: list[str] = []
     pending_list: str | None = None  # 'ul' | 'ol' while collecting <li>s
@@ -705,6 +730,8 @@ def _odt_to_html(data: bytes) -> str:
 
     # Build the final HTML with header/footer
     html_parts = [_page_setup_marker_from_odt(doc)]
+    if wm_marker:
+        html_parts.insert(0, wm_marker)
     if header_html:
         html_parts.append(f'<header class="page-header">{header_html}</header>')
     html_parts.extend(parts)
@@ -831,7 +858,8 @@ def _master_page_section_to_html(section, resolve, pictures, changes=None) -> st
     """Convert a master page header/footer section to HTML."""
     html_parts = []
     for child in section.childNodes:
-        if child.qname == (TEXTNS, "p"):
+        if child.qname == (TEXTNS, "p") and \
+                child.getAttribute("stylename") != "WO_Watermark":
             inner = _paragraph_inner_html(child, resolve, pictures, changes)
             html_parts.append(f"<p>{inner}</p>")
     return "\n".join(html_parts)
@@ -1537,6 +1565,37 @@ def html_to_odt(html_fragment: str) -> bytes:
     if ps_m:
         _apply_page_setup_marker_odt(doc, ps_m.group(1))
         body = body[ps_m.end():]
+    # Section flag markers (hyphenation / line numbers / watermark) ride at
+    # body start in the same fixed order the reader emits them. ODT models
+    # only the watermark (folded into the header); hyphenation and line
+    # numbers are documented ODT divergences (markers are stripped so they
+    # never become body paragraphs).
+    wm_attrs = None
+    for marker, holder in ((_HYPHENATION_RE, "hy"),
+                           (_LINE_NUMBERS_RE, "ln"),
+                           (_WATERMARK_RE, "wm")):
+        m = marker.match(body)
+        if not m:
+            continue
+        if holder == "wm":
+            wm_attrs = m.group(1)
+        body = body[m.end():]
+
+    # Fold the watermark into the header content (creating one if absent).
+    # The color is validated so hostile data can't smuggle raw CSS through.
+    if wm_attrs is not None and re.search(r'data-color="#[0-9a-fA-F]{6}"', wm_attrs):
+        try:
+            wm_par = _watermark_paragraph_html_shared(wm_attrs)
+        except Exception:
+            wm_par = None
+        if wm_par:
+            hdr_has = re.search(r'<header([^>]*)>(.*?)</header>', body, re.S | re.I)
+            if hdr_has:
+                body = (body[:hdr_has.start()]
+                        + f'<header{hdr_has.group(1)}>{wm_par}{hdr_has.group(2)}</header>'
+                        + body[hdr_has.end():])
+            else:
+                body = f'<header>{wm_par}</header>' + body
 
     # Extract header and footer if present
     header_content = None
@@ -1667,6 +1726,16 @@ def _para_props(open_tag_and_attrs: str) -> dict:
             props["page-break-before"] = True
         elif prop == "text-align" and val in ("center", "right"):
             props["text-align"] = val
+        elif prop == "border" or prop.startswith("border-"):
+            side = "all" if prop == "border" else prop.split("-", 1)[1]
+            if side not in ("top", "right", "bottom", "left", "all"):
+                continue
+            b = _parse_border(val.split(";")[0])
+            if not b:
+                from src.editor.converter import _normalize_border
+                b = _normalize_border(val)
+            if b:
+                props.setdefault("borders", {})[side] = b
     if 'dir="rtl"' in open_tag_and_attrs:
         props["direction"] = "rtl"
     return props
@@ -1765,7 +1834,10 @@ class _OdtWriter:
         """
         if not props:
             return None
-        key = tuple(sorted(props.items()))
+        cache_props = dict(props)
+        if "borders" in cache_props:
+            cache_props["borders"] = tuple(sorted(cache_props["borders"].items()))
+        key = tuple(sorted(cache_props.items()))
         if key in self._para_styles:
             return self._para_styles[key]
         align = props.get("text-align")
@@ -1791,6 +1863,11 @@ class _OdtWriter:
             pp["writingmode"] = "rtl"
         if props.get("page-break-before"):
             pp["breakbefore"] = "page"
+        for side in ("top", "left", "bottom", "right"):
+            val = (props.get("borders") or {}).get(side) \
+                or (props.get("borders") or {}).get("all")
+            if val:
+                pp[f"border{side}"] = val
         style = Style(name=name, family="paragraph")
         style.addElement(ParagraphProperties(**pp))
         self.doc.automaticstyles.addElement(style)
@@ -2087,15 +2164,33 @@ class _OdtWriter:
 
         Creates a master page style with style:header containing the content.
         """
-        from odf.style import Header, MasterPage, PageLayout
-        from odf.text import P
+        from odf.style import Header, MasterPage, PageLayout, Style, ParagraphProperties, TextProperties
+        from odf.text import P, Span
 
-        # Create a page layout if we don't have one
+        # Page-layout check unchanged
         if not any(el.getAttribute("name") == "WO_PageLayout"
                    for el in self.doc.automaticstyles.childNodes
                    if el.qname == (STYLENS, "page-layout")):
             pageLayout = PageLayout(name="WO_PageLayout")
             self.doc.automaticstyles.addElement(pageLayout)
+
+        # Watermark styles (created once): WO_Watermark paragraph style
+        # (centered) + WO_WatermarkText character style (32pt bold gray).
+        # The color follows this doc's watermark marker.
+        mcol = re.search(r'color:#([0-9a-fA-F]{6})', content_html)
+        self._wm_color = mcol.group(1) if mcol else "C0C0C0"
+        wm_ps = next((el for el in self.doc.automaticstyles.childNodes
+                      if getattr(el, "qname", None) == (STYLENS, "style")
+                      and el.getAttribute("name") == "WO_Watermark"), None)
+        if wm_ps is None:
+            wm_par = Style(name="WO_Watermark", family="paragraph")
+            wm_par.addElement(ParagraphProperties(textalign="center"))
+            self.doc.automaticstyles.addElement(wm_par)
+            wm_txt = Style(name="WO_WatermarkText", family="text")
+            wm_txt.addElement(TextProperties(
+                fontsize="32pt", fontweight="bold",
+                color=self._wm_color))
+            self.doc.automaticstyles.addElement(wm_txt)
 
         # Create or update master page with header
         master_name = "WO_Master"
@@ -2119,9 +2214,19 @@ class _OdtWriter:
         # Parse the header content into paragraphs
         for p_match in re.finditer(r'<p([^>]*)>(.*?)</p>', content_html, re.S | re.I):
             p_inner = p_match.group(2)
-            p = P()
-            # Add runs to the paragraph
-            self._add_runs_to_element(p, p_inner)
+            wm = re.search(
+                r'<span\s+style="font-size:(\d+(?:\.\d+)?)pt;'
+                r'color:#([0-9a-fA-F]{6});font-weight:bold">([^<]*)</span>',
+                p_inner)
+            if wm:
+                p = P(stylename="WO_Watermark")
+                span = Span(stylename="WO_WatermarkText")
+                span.addText(wm.group(3))
+                p.addElement(span)
+            else:
+                p = P()
+                # Add runs to the paragraph
+                self._add_runs_to_element(p, p_inner)
             header.addElement(p)
 
         master.addElement(header)

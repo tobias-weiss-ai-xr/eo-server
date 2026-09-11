@@ -175,7 +175,8 @@ def _sanitize_style(value: str) -> str | None:
         "font-style", "font-variant", "text-transform", "direction",
         "text-align", "text-decoration", "margin", "margin-top",
         "margin-bottom", "margin-left", "margin-right", "padding", "padding-top",
-        "padding-bottom", "padding-left", "padding-right", "border", "line-height",
+        "padding-bottom", "padding-left", "padding-right", "border", "border-top",
+        "border-bottom", "border-left", "border-right", "line-height",
     }
 
     # Reject any style that contains an unsafe construct anywhere

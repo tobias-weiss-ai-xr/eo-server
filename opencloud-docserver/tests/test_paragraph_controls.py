@@ -194,8 +194,9 @@ def test_paragraph_shading_and_borders_not_serialized_from_html():
         assert "shaded para" in out_odt or "bordered para" in out_odt
 
 
-def test_paragraph_shading_and_borders_not_serialized_to_html():
-    """w:pPr/w:shd and w:pBdr in a source DOCX are dropped on conversion."""
+def test_paragraph_shading_not_serialized_and_borders_serialized():
+    """w:pPr/w:shd is dropped on conversion; w:pBdr now serializes to the
+    border-* CSS contract (F-127 paragraph borders)."""
     from docx import Document
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
@@ -218,4 +219,5 @@ def test_paragraph_shading_and_borders_not_serialized_to_html():
     doc.save(buf)
 
     out = docx_to_html(buf.getvalue())
-    assert out == "<p>shaded docx para</p>", out
+    assert out == (
+        '<p style="border-top:1pt solid #ff0000">shaded docx para</p>'), out
