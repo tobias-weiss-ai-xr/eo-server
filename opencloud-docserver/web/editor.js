@@ -946,6 +946,14 @@
     if (cmd === "toggleHyphenation") { toggleSectionMarker("hyphenation", "data-auto=\"1\""); return; }
     if (cmd === "toggleLineNumbers") { toggleSectionMarker("line-numbers", "data-restart=\"eachPage\""); return; }
     if (cmd === "toggleWatermark") { toggleSectionMarker("watermark", "data-text=\"DRAFT\" data-color=\"#C0C0C0\""); return; }
+    if (cmd === "toggleDifferentFirst") { toggleSectionMarker("different-first", ""); return; }
+    if (cmd === "toggleOddEven") { toggleSectionMarker("odd-even", ""); return; }
+    // Distances use a non-default value (0.8") so the marker round-trips:
+    // pgMar w:header/w:footer at exactly 720 twips (0.5") equals the OOXML
+    // default and reads back marker-free. A value control (input in the
+    // page-setup dialog) would be the natural upgrade.
+    if (cmd === "toggleHeaderFromTop") { toggleSectionMarker("header-from-top", "data-inches=\"0.8\""); return; }
+    if (cmd === "toggleFooterFromBottom") { toggleSectionMarker("footer-from-bottom", "data-inches=\"0.8\""); return; }
     if (cmd === "toggleDropcap") { toggleDropcap(); return; }
     if (cmd === "openBorders") { openBordersDialog(); return; }
     if (cmd === "multilevel") { multilevelItem(); return; }
@@ -3132,7 +3140,12 @@
     return Array.from(editor.querySelectorAll(":scope > div"))
       .find((el) => el.className === klass);
   }
-  const SECTION_MARKER_ORDER = ["page-setup", "hyphenation", "line-numbers", "watermark"];
+  // Canonical body-start order — MUST match the converter strip order
+  // (html_to_docx: hyphenation, line-numbers, different-first, odd-even,
+  // header-from-top, footer-from-bottom, watermark) and the reader's
+  // emission order, or markers are lost on save.
+  const SECTION_MARKER_ORDER = ["page-setup", "hyphenation", "line-numbers",
+    "different-first", "odd-even", "header-from-top", "footer-from-bottom", "watermark"];
   function toggleSectionMarker(klass, attrs) {
     let m = sectionMarkerEl(klass);
     if (m) {

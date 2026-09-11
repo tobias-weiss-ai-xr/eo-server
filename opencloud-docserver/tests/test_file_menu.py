@@ -184,11 +184,12 @@ def test_stub_buttons_are_loud_and_documented():
     iteration backlog; promoting one = id + handler + drop the attribute."""
     import re
     stubs = re.findall(r'data-stub="([^"]+)"', HTML)
-    # Registry floor = the ledger's live stub count (21 buttons after the R4
-    # promotions) + the "<ref>" documentation example; drops below the known
-    # inventory mean silent stub removal without a promotion — the reconcile
-    # CI gate re-asserts this via the census (stubs 21, ledger stub 0).
-    assert len(stubs) >= 22, f"expected the full stub registry, got {len(stubs)}"
+    # Registry floor = the ledger's live stub count (17 buttons after the
+    # R4 + R5 promotions) + the "<ref>" documentation example; drops below
+    # the known inventory mean silent stub removal without a promotion — the
+    # reconcile CI gate re-asserts this via the census (stubs 17, ledger
+    # stub 0).
+    assert len(stubs) >= 18, f"expected the full stub registry, got {len(stubs)}"
     assert len(stubs) == len(set(stubs)), "duplicate stub ref"
     assert 'button[data-stub]' in JS, "generic stub handler missing"
     assert "setStatus" in JS
@@ -213,8 +214,12 @@ def test_header_footer_contextual_tab():
     page = HTML.split('class="ribbon-page" data-tab="header-footer"')[1].split("</div>")[0]
     for el in ("btn-hf-close", "btn-hf-pagenumber", "btn-hf-datetime"):
         assert f'id="{el}"' in page, f"{el} must be on the H&F tab"
-    for stub in ("hf.different-first", "hf.odd-even", "hf.header-from-top", "hf.footer-from-bottom"):
-        assert f'data-stub="{stub}"' in page
-    for anchor in ("enterHFMode", "exitHFMode", '"btn-hf-close"', 'dblclick', '.page-header'):
+    # R5: the four option stubs became real section-marker commands.
+    for cmd in ("toggleDifferentFirst", "toggleOddEven",
+                "toggleHeaderFromTop", "toggleFooterFromBottom"):
+        assert f'data-cmd="{cmd}"' in page, f"{cmd} must be a real command on the H&F tab"
+    for anchor in ("enterHFMode", "exitHFMode", '"btn-hf-close"', 'dblclick', '.page-header',
+                   "toggleDifferentFirst", "toggleOddEven",
+                   "toggleHeaderFromTop", "toggleFooterFromBottom"):
         assert anchor in JS, f"H&F wiring missing: {anchor}"
     assert '"Tab.HeaderFooter"' in I18N and '"HF.Close"' in I18N

@@ -14,6 +14,7 @@ fo:border-*.
 import io
 
 from docx import Document
+from docx.oxml.ns import qn
 
 from src.editor.converter import docx_to_html, html_to_docx
 from src.editor.odt_converter import html_to_odt, odt_to_html
@@ -182,3 +183,91 @@ def test_markers_never_leak_into_body():
         '<p>real content</p>'))
     assert out.count("<div class=") == 3
     assert "<p>real content</p>" in out
+
+
+# ── header/footer section markers (R5: different-first / odd-even / ──
+# ── header-from-top / footer-from-bottom) ─────────────────────────────
+def test_different_first_marker_round_trip():
+    h = '<div class="different-first"></div><p>First page separate.</p>'
+    assert _rt(h).split("\n")[0] == '<div class="different-first"></div>'
+
+
+def test_different_first_absent_when_off():
+    assert "different-first" not in _rt("<p>Unified.</p>")
+
+
+def test_different_first_written_to_titlepg():
+    data = html_to_docx('<div class="different-first"></div><p>x</p>')
+    d = Document(io.BytesIO(data))
+    assert d.sections[0]._sectPr.find(qn("w:titlePg")) is not None
+
+
+def test_odd_even_marker_round_trip():
+    h = '<div class="odd-even"></div><p>Mirror headers.</p>'
+    assert _rt(h).split("\n")[0] == '<div class="odd-even"></div>'
+
+
+def test_odd_even_absent_when_off():
+    assert "odd-even" not in _rt("<p>Unified.</p>")
+
+
+def test_odd_even_written_to_settings():
+    data = html_to_docx('<div class="odd-even"></div><p>x</p>')
+    d = Document(io.BytesIO(data))
+    assert d.settings.element.find(qn("w:evenAndOddHeaders")) is not None
+
+
+def test_header_from_top_marker_round_trip():
+    h = '<div class="header-from-top" data-inches="0.8"></div><p>Gap.</p>'
+    assert _rt(h).split("\n")[0] == '<div class="header-from-top" data-inches="0.8"></div>'
+
+
+def test_footer_from_bottom_marker_round_trip():
+    h = '<div class="footer-from-bottom" data-inches="1"></div><p>Gap.</p>'
+    assert _rt(h).split("\n")[0] == '<div class="footer-from-bottom" data-inches="1"></div>'
+
+
+def test_hf_distance_written_to_pgmar():
+    data = html_to_docx(
+        '<div class="header-from-top" data-inches="0.8"></div>'
+        '<div class="footer-from-bottom" data-inches="1"></div><p>x</p>')
+    d = Document(io.BytesIO(data))
+    pgMar = d.sections[0]._sectPr.find(qn("w:pgMar"))
+    assert pgMar.get(qn("w:header")) == "1152"   # 0.8in * 1440 twips
+    assert pgMar.get(qn("w:footer")) == "1440"   # 1in * 1440 twips
+
+
+def test_hf_markers_absent_when_off():
+    out = _rt("<p>Defaults.</p>")
+    for m in ("different-first", "odd-even", "header-from-top", "footer-from-bottom"):
+        assert m not in out
+
+
+def test_default_header_distance_reads_marker_free():
+    # 720 twips == the OOXML pgMar default (0.5"); a doc materializing the
+    # default reads back marker-free because the value equals the default.
+    assert "header-from-top" not in _rt(
+        '<div class="header-from-top" data-inches="0.5"></div><p>x</p>')
+
+
+
+
+def test_hf_markers_round_trip_with_existing_flags():
+    # Canonical body-start order: hy, ln, df, oe, htf, ftb, wm.
+    h = ('<div class="hyphenation" data-auto="1"></div>'
+         '<div class="line-numbers" data-restart="eachPage"></div>'
+         '<div class="different-first"></div>'
+         '<div class="odd-even"></div>'
+         '<div class="header-from-top" data-inches="0.8"></div>'
+         '<div class="footer-from-bottom" data-inches="1"></div>'
+         '<div class="watermark" data-text="DRAFT" data-color="#C0C0C0"></div><p>Body.</p>')
+    out = _rt(h)
+    for m in ('class="hyphenation"', 'class="line-numbers"',
+              'class="different-first"', 'class="odd-even"',
+              'class="header-from-top" data-inches="0.8"',
+              'class="footer-from-bottom" data-inches="1"',
+              'class="watermark" data-text="DRAFT" data-color="#c0c0c0"'):
+        assert m in out, f"lost {m}: {out[:200]!r}"
+    for a, b in (("different-first", "odd-even"), ("odd-even", "header-from-top"),
+                 ("header-from-top", "footer-from-bottom"), ("footer-from-bottom", "watermark")):
+        assert out.index(a) < out.index(b), f"order broken between {a} and {b}"

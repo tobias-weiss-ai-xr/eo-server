@@ -85,6 +85,10 @@ from src.editor.converter import (
     _HYPHENATION_RE,
     _LINE_NUMBERS_RE,
     _WATERMARK_RE,
+    _DIFFERENT_FIRST_RE,
+    _ODD_EVEN_RE,
+    _HEADER_FROM_TOP_RE,
+    _FOOTER_FROM_BOTTOM_RE,
     _watermark_paragraph_html as _watermark_paragraph_html_shared,
 )
 
@@ -1571,8 +1575,15 @@ def html_to_odt(html_fragment: str) -> bytes:
     # numbers are documented ODT divergences (markers are stripped so they
     # never become body paragraphs).
     wm_attrs = None
+    # (R5: the different-first / odd-even / header-from-top /
+    # footer-from-bottom markers are ODT divergences too — stripped like
+    # hyphenation and line numbers, so they never become body paragraphs.)
     for marker, holder in ((_HYPHENATION_RE, "hy"),
                            (_LINE_NUMBERS_RE, "ln"),
+                           (_DIFFERENT_FIRST_RE, "df"),
+                           (_ODD_EVEN_RE, "oe"),
+                           (_HEADER_FROM_TOP_RE, "htf"),
+                           (_FOOTER_FROM_BOTTOM_RE, "ftb"),
                            (_WATERMARK_RE, "wm")):
         m = marker.match(body)
         if not m:

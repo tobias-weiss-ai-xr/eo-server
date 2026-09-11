@@ -1619,3 +1619,76 @@ def test_r4_view_hyperlink_ai_congruence(servers):
         finally:
             ctx.close()
             browser.close()
+
+
+def test_r5_header_footer_section_markers_roundtrip(servers):
+    """R5 Header & Footer batch: different-first (w:titlePg), odd-even
+    (w:evenAndOddHeaders), header-from-top / footer-from-bottom (pgMar
+    w:header / w:footer distances) — marker divs ride at body start in
+    canonical order and survive save (host) + reload, like the WS-A
+    hyphenation/line-numbers/watermark markers."""
+    from playwright.sync_api import sync_playwright
+
+    seed = _seed_doc(servers, "r5.docx", text="Alpha beta gamma delta end.")
+
+    def _bus(frame, cmd):
+        frame.evaluate(
+            "c => dispatchEvent(new CustomEvent('wo-command',"
+            " { detail: { command: c, value: null } }))",
+            cmd,
+        )
+
+    def _html(frame):
+        return frame.evaluate("document.getElementById('editor').innerHTML")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context()
+            parent = ctx.new_page()
+            parent.goto(_parent_url(servers, seed))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "Alpha beta gamma delta end." in _frame_text(frame))
+
+            for n, (cmd, klass) in enumerate((("toggleDifferentFirst", "different-first"),
+                               ("toggleOddEven", "odd-even"),
+                               ("toggleHeaderFromTop", "header-from-top"),
+                               ("toggleFooterFromBottom", "footer-from-bottom"))):
+                _bus(frame, cmd)
+                print("STEP r5", n, cmd, flush=True)
+                _wait(lambda k=klass: f'class="{k}"' in _html(frame).lower())
+
+            # save -> host stores the markers (converter round-trip)
+            frame.locator("#btn-save").click()
+            _wait(lambda: 'class="different-first"' in _host_html(servers, seed).lower())
+            host = _host_html(servers, seed).lower()
+            for k in ("different-first", "odd-even", "header-from-top", "footer-from-bottom"):
+                assert f'class="{k}"' in host, f"{k} missing after save"
+            assert 'class="header-from-top" data-inches="0.8"' in host
+            assert 'class="footer-from-bottom" data-inches="0.8"' in host
+
+            # reload a fresh editor from the same host doc -> markers return
+            parent2 = ctx.new_page()
+            parent2.goto(_parent_url(servers, seed))
+            frame2 = parent2.frame("ed")
+            frame2.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: 'class="different-first"' in frame2.evaluate(
+                "document.getElementById('editor').innerHTML").lower())
+            f2 = frame2.evaluate(
+                "document.getElementById('editor').innerHTML").lower()
+            for k in ("different-first", "odd-even", "header-from-top", "footer-from-bottom"):
+                assert f'class="{k}"' in f2, f"{k} missing after reload"
+
+            # toggle two off -> save -> gone, the other two persist
+            _bus(frame, "toggleDifferentFirst")
+            _bus(frame, "toggleOddEven")
+            _wait(lambda: 'class="different-first"' not in _html(frame).lower())
+            frame.locator("#btn-save").click()
+            _wait(lambda: 'class="different-first"' not in _host_html(servers, seed).lower())
+            host = _host_html(servers, seed).lower()
+            assert 'class="odd-even"' not in host
+            for k in ("header-from-top", "footer-from-bottom"):
+                assert f'class="{k}"' in host, f"{k} should persist"
+        finally:
+            ctx.close()

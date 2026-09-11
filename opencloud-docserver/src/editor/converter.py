@@ -2470,6 +2470,14 @@ _LINE_NUMBERS_RE = re.compile(
     r'\s*<div\s+class="line-numbers"([^>]*)>\s*</div>', re.I)
 _WATERMARK_RE = re.compile(
     r'\s*<div\s+class="watermark"([^>]*)>\s*</div>', re.I)
+_DIFFERENT_FIRST_RE = re.compile(
+    r'\s*<div\s+class="different-first"([^>]*)>\s*</div>', re.I)
+_ODD_EVEN_RE = re.compile(
+    r'\s*<div\s+class="odd-even"([^>]*)>\s*</div>', re.I)
+_HEADER_FROM_TOP_RE = re.compile(
+    r'\s*<div\s+class="header-from-top"([^>]*)>\s*</div>', re.I)
+_FOOTER_FROM_BOTTOM_RE = re.compile(
+    r'\s*<div\s+class="footer-from-bottom"([^>]*)>\s*</div>', re.I)
 
 
 def _section_flags_marker_from_docx(doc) -> str:
@@ -2499,6 +2507,41 @@ def _section_flags_marker_from_docx(doc) -> str:
                 if dist:
                     attrs += f' data-distance="{escape(dist)}"'
                 out.append(f'<div class="line-numbers"{attrs}></div>')
+    except Exception:
+        pass
+    # Header/footer section markers (R5): different-first -> w:titlePg in
+    # sectPr, odd-even -> w:evenAndOddHeaders in settings.xml (like
+    # autoHyphenation), header-from-top / footer-from-bottom -> pgMar
+    # w:header / w:footer distances in twips. Emission order MUST match the
+    # strip order: hy, ln, df, oe, htf, ftb (watermark last) + editor.js
+    # SECTION_MARKER_ORDER. ODT models none of these (markers degrade
+    # there, like hyphenation / line numbers).
+    try:
+        sectPr = doc.sections[0]._sectPr
+        if sectPr is not None and sectPr.find(qn("w:titlePg")) is not None:
+            out.append('<div class="different-first"></div>')
+    except Exception:
+        pass
+    try:
+        settings_el = getattr(doc.settings, "element", None)
+        if settings_el is not None:
+            if settings_el.find(qn("w:evenAndOddHeaders")) is not None:
+                out.append('<div class="odd-even"></div>')
+    except Exception:
+        pass
+    try:
+        sectPr = doc.sections[0]._sectPr
+        if sectPr is not None:
+            pgMar = sectPr.find(qn("w:pgMar"))
+            if pgMar is not None:
+                # A materialized w:header of 720 == the OOXML default
+                # (0.5"), so it round-trips as the default, marker-free.
+                hv = pgMar.get(qn("w:header"))
+                if hv and int(hv) != 720:
+                    out.append(f'<div class="header-from-top" data-inches="{int(hv) / 1440:.3g}"></div>')
+                fv = pgMar.get(qn("w:footer"))
+                if fv and int(fv) != 720:
+                    out.append(f'<div class="footer-from-bottom" data-inches="{int(fv) / 1440:.3g}"></div>')
     except Exception:
         pass
     return "".join(out)
@@ -2583,8 +2626,12 @@ def _watermark_paragraph_html(attrs: str) -> str:
             f'color:{c};font-weight:bold">{escape(t)}</span></p>')
 
 
-def _apply_section_flags(hy_attrs: str | None, ln_attrs: str | None, doc) -> None:
-    """Apply hyphenation (settings.xml) + line numbers (sectPr) markers."""
+def _apply_section_flags(hy_attrs: str | None, ln_attrs: str | None,
+                          hf_attrs: dict[str, str | None], doc) -> None:
+    """Apply hyphenation (settings.xml) + line numbers (sectPr) markers plus
+    the R5 header/footer markers: different-first -> w:titlePg (sectPr),
+    odd-even -> w:evenAndOddHeaders (settings.xml), header-from-top /
+    footer-from-bottom -> pgMar w:header / w:footer distances (twips)."""
     if hy_attrs is not None:
         try:
             settings_el = getattr(doc.settings, "element", None)
@@ -2618,6 +2665,48 @@ def _apply_section_flags(hy_attrs: str | None, ln_attrs: str | None, doc) -> Non
                     el.set(qn("w:distance"), dist.group(1))
         except Exception:
             pass
+    if "df" in hf_attrs:
+        try:
+            sectPr = doc.sections[0]._sectPr
+            if sectPr is not None and sectPr.find(qn("w:titlePg")) is None:
+                el = OxmlElement("w:titlePg")
+                anchor = sectPr.find(qn("w:docGrid"))
+                if anchor is not None:
+                    anchor.addprevious(el)
+                else:
+                    sectPr.append(el)
+        except Exception:
+            pass
+    if "htf" in hf_attrs or "ftb" in hf_attrs:
+        try:
+            sectPr = doc.sections[0]._sectPr
+            if sectPr is not None:
+                pgMar = sectPr.find(qn("w:pgMar"))
+                if pgMar is None:
+                    pgMar = OxmlElement("w:pgMar")
+                    anchor = sectPr.find(qn("w:pgSz"))
+                    if anchor is not None:
+                        anchor.addnext(pgMar)
+                    else:
+                        sectPr.append(pgMar)
+                if "htf" in hf_attrs:
+                    m = re.search(r'data-inches="([^"]*)"', hf_attrs["htf"])
+                    if m:
+                        pgMar.set(qn("w:header"), str(int(round(float(m.group(1)) * 1440))))
+                if "ftb" in hf_attrs:
+                    m = re.search(r'data-inches="([^"]*)"', hf_attrs["ftb"])
+                    if m:
+                        pgMar.set(qn("w:footer"), str(int(round(float(m.group(1)) * 1440))))
+        except Exception:
+            pass
+    if "oe" in hf_attrs:
+        try:
+            settings_el = getattr(doc.settings, "element", None)
+            if settings_el is not None and settings_el.find(qn("w:evenAndOddHeaders")) is None:
+                el = OxmlElement("w:evenAndOddHeaders")
+                settings_el.append(el)
+        except Exception:
+            pass
 
 
 _DROP_CAP_RE = re.compile(r'^<span class="dropcap">([^<]*)</span>', re.I)
@@ -2646,11 +2735,17 @@ def html_to_docx(html_fragment: str) -> bytes:
     ps_attrs = ps_m.group(1) if ps_m else None
     if ps_m:
         html_fragment = html_fragment[ps_m.end():]
-    # Section flag markers (hyphenation / line numbers / watermark) ride
-    # at body start in the same fixed order the reader emits them.
+    # Section flag markers (hyphenation / line numbers / watermark /
+    # header-footer) ride at body start in the same fixed order the reader
+    # emits them (hy, ln, df, oe, htf, ftb, wm).
     hy_attrs = ln_attrs = wm_attrs = None
+    hf_attrs: dict[str, str | None] = {}
     for marker, holder in ((_HYPHENATION_RE, "hy"),
                            (_LINE_NUMBERS_RE, "ln"),
+                           (_DIFFERENT_FIRST_RE, "df"),
+                           (_ODD_EVEN_RE, "oe"),
+                           (_HEADER_FROM_TOP_RE, "htf"),
+                           (_FOOTER_FROM_BOTTOM_RE, "ftb"),
                            (_WATERMARK_RE, "wm")):
         m = marker.match(html_fragment)
         if not m:
@@ -2659,8 +2754,10 @@ def html_to_docx(html_fragment: str) -> bytes:
             hy_attrs = m.group(1)
         elif holder == "ln":
             ln_attrs = m.group(1)
-        else:
+        elif holder == "wm":
             wm_attrs = m.group(1)
+        else:
+            hf_attrs[holder] = m.group(1)
         html_fragment = html_fragment[m.end():]
     # Split tables out; python-docx tables and paragraphs share the body
     # but order interleaving is complex — append tables at the end.
@@ -2689,10 +2786,11 @@ def html_to_docx(html_fragment: str) -> bytes:
             cols_el.attrib.pop(qn("w:space"), None)
 
     # Apply the section flag markers (hyphenation in settings.xml / line
-    # numbers in sectPr; page geometry was applied above).
-    if hy_attrs is not None or ln_attrs is not None:
+    # numbers in sectPr / header-footer in titlePg, settings.xml and pgMar;
+    # page geometry was applied above).
+    if hy_attrs is not None or ln_attrs is not None or hf_attrs:
         try:
-            _apply_section_flags(hy_attrs, ln_attrs, doc)
+            _apply_section_flags(hy_attrs, ln_attrs, hf_attrs, doc)
         except Exception:
             pass  # a malformed marker degrades to the defaults
     # The watermark marker rides the document header: fold its paragraph
