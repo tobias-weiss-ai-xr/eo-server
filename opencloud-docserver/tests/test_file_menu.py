@@ -184,12 +184,12 @@ def test_stub_buttons_are_loud_and_documented():
     iteration backlog; promoting one = id + handler + drop the attribute."""
     import re
     stubs = re.findall(r'data-stub="([^"]+)"', HTML)
-    # Registry floor = the ledger's live stub count (15 after plugins.browse/
-    # plugins.manage promoted in WO-FEA-PLUG-0, down to 12 at HEAD, 11 after
-    # plugins.ocr promoted to real in WO-FEA-PLUG-1); drops below the known
-    # inventory mean silent stub removal without a promotion — the reconcile
-    # CI gate re-asserts this via the census (stubs 15, ledger stub 0).
-    assert len(stubs) >= 11, f"expected the full stub registry, got {len(stubs)}"
+    # Registry floor = the ledger's live stub count. The WO-FEA feature fleet
+    # promoted the entire draw/plugins/protection/references/collaboration
+    # backlog (17 live stubs -> 0), leaving only the "<ref>" documentation
+    # example; drops below this mean silent stub removal without a promotion
+    # — the reconcile CI gate re-asserts this via the census (stubs 1).
+    assert len(stubs) >= 1, f"expected the full stub registry, got {len(stubs)}"
     assert len(stubs) == len(set(stubs)), "duplicate stub ref"
     assert 'button[data-stub]' in JS, "generic stub handler missing"
     assert "setStatus" in JS
