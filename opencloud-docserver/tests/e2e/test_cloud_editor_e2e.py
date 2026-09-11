@@ -1124,3 +1124,72 @@ def test_change_case_and_font_step_via_bus(servers):
         finally:
             ctx.close()
             browser.close()
+
+
+def test_color_commands_via_bus_roundtrip_to_host(servers):
+    """F-125/F-126/F-127: hiliteColor/foreColor/backColor are real bus
+    commands (span[style] with styleWithCSS) and survive the save
+    round-trip; the toolbar color inputs that back them exist."""
+    from playwright.sync_api import sync_playwright
+
+    seed = _seed_doc(servers, "color.docx", text="Color me please")
+
+    _SET_RANGE = """([at, end]) => {
+      const ed = document.getElementById('editor');
+      ed.focus();
+      let pos = 0, sn = null, so = 0, en = null, eo = 0;
+      const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        const len = n.data.length;
+        if (!sn && pos + len >= at) { sn = n; so = at - pos; }
+        if (sn && pos + len >= end) { en = n; eo = end - pos; break; }
+        pos += len;
+      }
+      const r = document.createRange();
+      if (!en) { r.setStart(sn, Math.min(so, sn.data.length)); r.collapse(true); }
+      else { r.setStart(sn, so); r.setEnd(en, eo); }
+      const sel = getSelection();
+      sel.removeAllRanges(); sel.addRange(r);
+    }"""
+
+    def _bus(frame, cmd, value=None, at=None, end=None):
+        if at is not None:
+            frame.evaluate(_SET_RANGE, [at, end if end is not None else at])
+        frame.evaluate(
+            "([c, v]) => dispatchEvent(new CustomEvent('wo-command',"
+            " { detail: { command: c, value: v } }))",
+            [cmd, value],
+        )
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context()
+            parent = ctx.new_page()
+            parent.goto(_parent_url(servers, seed))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "Color me please" in _frame_text(frame))
+
+            # the three picker surfaces exist
+            for cid in ("text-color", "highlight-color", "shading-color"):
+                assert frame.locator("#" + cid).count() == 1
+
+            def _html():
+                return frame.evaluate(
+                    "document.getElementById('editor').innerHTML").lower()
+            _bus(frame, "hiliteColor", "#ff00aa", 0, 2)   # "Co"
+            _wait(lambda: "rgb(255, 0, 170)" in _html())
+            _bus(frame, "foreColor", "#0055ff", 6, 8)     # "me"
+            _wait(lambda: "rgb(0, 85, 255)" in _html())
+            _bus(frame, "backColor", "#f0e68c", 9, 15)    # "please"
+            _wait(lambda: "rgb(240, 230, 140)" in _html())
+
+            frame.locator("#btn-save").click()
+            _wait(lambda: "f0e68c" in _host_html(servers, seed).lower())
+            host = _host_html(servers, seed).lower()
+            assert "ff00aa" in host and "0055ff" in host and "f0e68c" in host
+        finally:
+            ctx.close()
+            browser.close()

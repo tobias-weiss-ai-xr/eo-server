@@ -3381,6 +3381,17 @@
         runCommand(item.dataset.cmd, item.dataset.value || null);
       });
     });
+    // Color menu items (F-125/F-126/F-127): open the matching toolbar
+    // color input's native picker — a real user gesture, so showPicker()
+    // is allowed; the input's change handler (above) then emits the
+    // foreColor/hiliteColor/backColor command.
+    list.querySelectorAll("button[data-picker]").forEach((item) => {
+      item.addEventListener("click", () => {
+        closeAllMenus();
+        const input = document.getElementById(item.dataset.picker);
+        if (input && input.showPicker) input.showPicker();
+      });
+    });
   });
 
   if (fileTrigger && fileMenu) {
@@ -3460,6 +3471,11 @@
   if (highlightColor) highlightColor.addEventListener("change", () => {
     if (READ_ONLY) return;
     emitCommand("hiliteColor", highlightColor.value);
+  });
+  const shadingColor = document.getElementById("shading-color");
+  if (shadingColor) shadingColor.addEventListener("change", () => {
+    if (READ_ONLY) return;
+    emitCommand("backColor", shadingColor.value);
   });
   const lineSpacingSel = document.getElementById("line-spacing");
   if (lineSpacingSel) lineSpacingSel.addEventListener("change", () => {

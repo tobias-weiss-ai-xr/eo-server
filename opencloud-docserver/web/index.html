@@ -291,9 +291,9 @@
     <span class="menu rb-menu" style="--rb-x: 548px">
       <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="More formatting" data-i18n-aria-label="Home.MoreFormatting">▾</button>
       <ul class="menu-list" role="menu" hidden>
-        <li role="none"><button type="button" role="menuitem" data-stub="home.highlight" data-i18n="Home.Highlight">Highlight color</button></li>
-        <li role="none"><button type="button" role="menuitem" data-stub="home.fontcolor" data-i18n="Home.FontColor">Font color</button></li>
-        <li role="none"><button type="button" role="menuitem" data-stub="home.shading" data-i18n="Home.Shading">Shading</button></li>
+        <li role="none"><button type="button" role="menuitem" data-picker="highlight-color" data-i18n="Home.Highlight">Highlight color</button></li>
+        <li role="none"><button type="button" role="menuitem" data-picker="text-color" data-i18n="Home.FontColor">Font color</button></li>
+        <li role="none"><button type="button" role="menuitem" data-picker="shading-color" data-i18n="Home.Shading">Shading</button></li>
         <li role="none"><button type="button" role="menuitem" data-stub="home.borders" data-i18n="Home.Borders">Borders</button></li>
         <li role="none"><button type="button" role="menuitem" data-cmd="changeCase" data-value="sentence" data-i18n="Home.ChangeCase.Sentence">Sentence case</button></li>
         <li role="none"><button type="button" role="menuitem" data-cmd="changeCase" data-value="lower" data-i18n="Home.ChangeCase.Lower">lowercase</button></li>
@@ -321,6 +321,10 @@
       <span class="color-key key-highlight" aria-hidden="true">A</span>
       <input type="color" id="highlight-color" value="#ffe97a" aria-label="Highlight color">
     </label>
+    <!-- Paragraph shading (F-127): hidden picker so the More-formatting
+         menu can open it via showPicker() without another toolbar swatch.
+         backColor with styleWithCSS applies background to the selection. -->
+    <input type="color" id="shading-color" hidden value="#f4f4f4" aria-label="Paragraph shading">
     <button class="rb" data-cmd="code" style="--rb-x: 609px; font-size: 10px" title="Inline code" data-i18n-title="Toolbar.CodeTitle" aria-label="Inline code" data-i18n-aria-label="Toolbar.Code" aria-pressed="false">&lt;/&gt;</button>
     <span class="menu rb-menu" style="--rb-x: 628px">
       <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="Code style options">▾</button>
