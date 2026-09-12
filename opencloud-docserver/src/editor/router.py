@@ -1200,14 +1200,30 @@ async def ocr_document(doc_id: str, request: Request) -> JSONResponse:
 
 @router.get("/api/plugins")
 async def list_plugins(request: Request) -> JSONResponse:
-    """Return the installed plugins registry.
+    """Return the installed plugin registry (catalog of hosted plugins).
 
-    In host mode this returns the local store's plugin metadata. In client
-    mode it forwards to the remote WOPI host when available.
+    Browse lists this catalog; Manage toggles per-plugin enable state.
     """
-    # For now, return an empty list. A real implementation would query
-    # the plugin store or forward to the WOPI host's plugin endpoint.
-    return JSONResponse({"plugins": []})
+    return JSONResponse({"plugins": _PLUGIN_REGISTRY})
+
+
+# The plugin catalog: every plugin the host ships. OCR and Photo editor
+# are real (see PLAIN web/editor.js photoEditor dialog + /ai/ocr); the
+# list grows when a new plugin host is added.
+_PLUGIN_REGISTRY = [
+    {
+        "id": "ocr",
+        "name": "OCR",
+        "version": "1.0.0",
+        "description": "Extract text from the document via the registered vision model (MODEL_REGISTRY; loud 503 when unregistered).",
+    },
+    {
+        "id": "photoeditor",
+        "name": "Photo editor",
+        "version": "1.0.0",
+        "description": "Canvas 2D filters on the selected image: brightness, contrast, rotate, crop; Save writes the image back.",
+    },
+]
 
 
 # ----------------------------------------------------------------------

@@ -1692,3 +1692,164 @@ def test_r5_header_footer_section_markers_roundtrip(servers):
                 assert f'class="{k}"' in host, f"{k} should persist"
         finally:
             ctx.close()
+
+
+def test_r6_fleet_feature_surfaces(servers):
+    """R6 taskfleet feature batch (WO-FEA fleet): draw ink canvas, plugin
+    host dialog (browse/manage with the real /api/plugins catalog + per-user
+    enable toggle), photo editor dialog, citation/index markers that survive
+    save + reload, chat panel, tracked-change navigation, and document
+    protection (restrict apply server-enforced + reload-restricted)."""
+    from playwright.sync_api import sync_playwright
+
+    seed = _seed_doc(servers, "r6.docx", text="R6 base text alpha content.")
+
+    def _bus(frame, cmd, value=None):
+        frame.evaluate(
+            "args => dispatchEvent(new CustomEvent('wo-command',"
+            " { detail: { command: args[0], value: args[1] } }))",
+            [cmd, value],
+        )
+
+    def _html(frame):
+        return frame.evaluate("document.getElementById('editor').innerHTML")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context()
+            parent = ctx.new_page()
+            parent.goto(_parent_url(servers, seed))
+            frame = parent.frame("ed")
+            frame.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: "R6 base text" in _frame_text(frame))
+
+            # ── draw: ink canvas engages / master toggle off / select aria ──
+            _bus(frame, "toggleInk", "pen")
+            print("STEP r6 draw", flush=True)
+            _wait(lambda: frame.evaluate(
+                "!!document.getElementById('ink-canvas')"
+                " && !document.getElementById('ink-canvas').hidden"))
+            assert "ink-canvas drawing" in frame.evaluate(
+                "document.getElementById('ink-canvas').className")
+            _bus(frame, "inkMode")
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('ink-canvas').hidden === true"))
+            _bus(frame, "inkSelect")
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('btn-ink-select')"
+                " && document.getElementById('btn-ink-select')"
+                ".getAttribute('aria-pressed') === 'true'"))
+
+            # ── plugins: browse opens real dialog with registry rows ──
+            _bus(frame, "browsePlugins")
+            print("STEP r6 plugins", flush=True)
+            _wait(lambda: frame.evaluate(
+                "(() => { const d = document.getElementById('plugins-dialog');"
+                " return d && d.classList.contains('open'); })()"))
+            names = frame.evaluate(
+                "Array.from(document.querySelectorAll('#plugins-list .plugins-name'))"
+                ".map(n => n.textContent)")
+            assert "OCR" in names and "Photo editor" in names, f"catalog: {names}"
+            _bus(frame, "managePlugins")
+            _wait(lambda: frame.evaluate(
+                "document.querySelectorAll('#plugins-list .plugins-toggle input').length >= 2"))
+            frame.evaluate(
+                "() => { const cb = document.querySelector("
+                " '#plugins-list .plugins-toggle input[data-plugin=\"ocr\"]');"
+                " if (cb) { cb.checked = false; cb.dispatchEvent(new Event('change')); } }")
+            saved = frame.evaluate("localStorage.getItem('wo.plugins.enabled')")
+            assert saved and '"ocr":false' in saved, f"toggle not persisted: {saved}"
+            frame.evaluate("document.getElementById('btn-plugins-close').click()")
+            _wait(lambda: not frame.evaluate(
+                "document.getElementById('plugins-dialog').classList.contains('open')"))
+
+            # ── photo editor dialog opens ──
+            _bus(frame, "photoEditor")
+            print("STEP r6 photo", flush=True)
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('photo-editor-dialog').classList.contains('open')"))
+            frame.evaluate("document.getElementById('btn-photo-editor-cancel').click()")
+            _wait(lambda: not frame.evaluate(
+                "document.getElementById('photo-editor-dialog').classList.contains('open')"))
+
+            # ── references: citation + index markers round-trip ──
+            frame.evaluate(
+                "() => { const ed = document.getElementById('editor');"
+                " ed.focus();"
+                " const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT);"
+                " const t = w.nextNode();"
+                " const r = document.createRange();"
+                " r.setStart(t, 1); r.collapse(true);"
+                " const s = document.getSelection();"
+                " s.removeAllRanges(); s.addRange(r); }")
+            _bus(frame, "insertCitation")
+            _bus(frame, "insertIndexEntry")
+            print("STEP r6 ref", flush=True)
+            _wait(lambda: 'class="ref-citation"' in _html(frame))
+            _wait(lambda: 'class="ref-index"' in _html(frame))
+            frame.locator("#btn-save").click()
+            _wait(lambda: 'class="ref-citation"' in _host_html(servers, seed).lower())
+            host = _host_html(servers, seed).lower()
+            assert 'class="ref-citation"' in host, "citation marker missing after save"
+            assert 'class="ref-index"' in host, "index marker missing after save"
+
+            # ── collab: chat panel + tracked-change navigation ──
+            _bus(frame, "toggleChat")
+            print("STEP r6 chat", flush=True)
+            _wait(lambda: frame.evaluate(
+                "!!document.getElementById('chat-panel')"
+                " && !document.getElementById('chat-panel').hidden"))
+            _bus(frame, "toggleChat")
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('chat-panel').hidden === true"))
+            frame.evaluate(
+                "() => { const ed = document.getElementById('editor');"
+                " ed.focus();"
+                " const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT);"
+                " const t = w.nextNode();"
+                " const r = document.createRange();"
+                " r.setStart(t, 1);"
+                " const ins = document.createElement('ins');"
+                " ins.className = 'track-insert';"
+                " ins.textContent = 'R6Changed';"
+                " r.insertNode(ins);"
+                " const s = document.getSelection();"
+                " s.removeAllRanges();"
+                " const r2 = document.createRange();"
+                " r2.setStartBefore(ins); r2.collapse(true); s.addRange(r2); }")
+            print("STEP r6 tracknav", flush=True)
+            _wait(lambda: 'class="track-insert"' in _html(frame))
+            _bus(frame, "nextTrackedChange")
+            _wait(lambda: frame.evaluate(
+                "(() => { const n = window.getSelection().anchorNode;"
+                " const el = n && n.nodeType === 3 ? n.parentElement : n;"
+                " return !!(el && el.closest && el.closest('ins.track-insert')); })()"))
+
+            # ── protection: apply restrict -> server-enforced + reload ──
+            _bus(frame, "protectDialog")
+            print("STEP r6 protect", flush=True)
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('protect-dialog').classList.contains('open')"))
+            frame.evaluate(
+                "() => { const r = document.getElementById('protect-check-restrict');"
+                " if (r) r.checked = true;"
+                " const pw = document.getElementById('protect-new-password');"
+                " if (pw) pw.value = 'secret-r6';"
+                " document.getElementById('btn-protect-apply').click(); }")
+            _wait(lambda: frame.evaluate(
+                "document.getElementById('editor').getAttribute('aria-readonly') === 'true'"))
+            assert frame.evaluate(
+                "document.getElementById('editor').contentEditable") == "false"
+            assert frame.evaluate("document.getElementById('btn-save').disabled") is True
+
+            # reload a fresh editor from the same host doc -> still restricted
+            parent2 = ctx.new_page()
+            parent2.goto(_parent_url(servers, seed))
+            frame2 = parent2.frame("ed")
+            frame2.locator("#editor").wait_for(state="visible", timeout=45000)
+            _wait(lambda: frame2.evaluate(
+                "document.getElementById('editor').getAttribute('aria-readonly') === 'true'"),
+                timeout=30)
+        finally:
+            ctx.close()

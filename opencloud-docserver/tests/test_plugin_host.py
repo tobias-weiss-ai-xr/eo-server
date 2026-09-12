@@ -39,12 +39,24 @@ def test_editor_js_wires_plugin_commands():
 
 
 def test_router_exposes_plugins_registry():
-    """Plugin registry API endpoint exists."""
+    """Plugin registry API endpoint exists AND ships the catalog."""
     assert '"/api/plugins"' in ROUTER, "missing /api/plugins route in router.py"
     assert "list_plugins" in ROUTER, "missing list_plugins function in router.py"
+    assert '"id": "ocr"' in ROUTER, "registry must list the ocr plugin"
+    assert '"id": "photoeditor"' in ROUTER, "registry must list the photoeditor plugin"
 
 
-def test_plugins_handlers_call_setStatus():
-    """Plugin handlers call setStatus to report actions."""
-    assert 'setStatus("Browse plugins dialog would open here (plugins.browse)")' in JS
-    assert 'setStatus("Manage plugins dialog would open here (plugins.manage)")' in JS
+def test_plugins_handlers_open_real_dialog():
+    """Plugin handlers open a real dialog listing the registry — a status
+    message is NOT a real handler (loud-stub doctrine)."""
+    # The dialog and list must exist in the DOM.
+    assert 'id="plugins-dialog"' in HTML, "missing #plugins-dialog"
+    assert 'id="plugins-list"' in HTML, "missing #plugins-list"
+    # Handlers must fetch the registry and open the dialog.
+    assert 'fetch("/api/plugins")' in JS, "browse/manage must fetch the registry"
+    assert '_renderPluginsDialog' in JS, "missing dialog renderer"
+    assert 'classList.add("open")' in JS.split("async function browsePlugins")[1], \
+        "browsePlugins must open the dialog"
+    # The old status-stub messages must be gone.
+    assert 'Browse plugins dialog would open here' not in JS
+    assert 'Manage plugins dialog would open here' not in JS

@@ -1107,6 +1107,37 @@ main {
   box-sizing: border-box;
 }
 
+/* Plugin host dialog (plugins.browse / plugins.manage). The registry
+   list reuses .dialog; browse shows catalog rows, manage adds a per-
+   plugin enabled toggle (per-user localStorage). */
+.plugins-dialog { min-width: 360px; max-width: 480px; }
+.plugins-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.plugins-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.plugins-item:last-child { border-bottom: none; }
+.plugins-empty { padding: 14px; color: var(--muted); font-size: 13px; }
+.plugins-head { display: flex; align-items: center; gap: 8px; }
+.plugins-name { font-weight: 600; }
+.plugins-version { font-size: 11px; color: var(--muted); }
+.plugins-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.plugins-desc { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+
 /* ---- photo editor plugin dialog (canvas filter preview) ---- */
 .photo-editor-dialog { width: 680px; max-width: 94vw; }
 .photo-editor-canvas-wrap {

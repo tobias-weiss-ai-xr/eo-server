@@ -1171,6 +1171,9 @@
         } else if (cmd === "inkMode") {
           // Draw master toggle is active while any ink tool is engaged.
           active = !!inkMode;
+        } else if (cmd === "inkSelect") {
+          // Select tool button reflects the select stroke-tool.
+          active = inkMode === "select";
         } else {
           active = cmd === "formatBlock"
             ? (btn.dataset.value || "P") === currentBlockTag()
@@ -3359,13 +3362,22 @@
   function insertCitation() {
     editor.focus();
     const sel = document.getSelection();
-    if (sel && sel.rangeCount) {
-      const range = sel.getRangeAt(0);
-      // Insert a citation marker at the cursor position
-      // Pattern: <sup class="ref-citation" data-key="Author2024">[1]</sup>
-      const citationMarker = '<sup class="ref-citation" data-key="">[1]</sup>';
-      document.execCommand("insertHTML", false, citationMarker);
-    }
+    if (!sel || !sel.rangeCount) return;
+    // Direct DOM insertion (not execCommand insertHTML): Chromium's
+    // insertHTML sanitizer strips the class/tag of content-bearing markup
+    // (it rewrote <sup class="ref-citation"> into a bare styled span), so
+    // the canonical marker must be built node-by-node to round-trip.
+    const range = sel.getRangeAt(0);
+    const sup = document.createElement("sup");
+    sup.className = "ref-citation";
+    sup.setAttribute("data-key", "");
+    sup.textContent = "[1]";
+    range.deleteContents();
+    range.insertNode(sup);
+    range.setStartAfter(sup);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
     moveCaretPastStructuralMarkers();
     captureHistory();
     markDirty();
@@ -3377,15 +3389,20 @@
   function insertIndexEntry() {
     editor.focus();
     const sel = document.getSelection();
-    let selectedText = "";
-    if (sel && sel.rangeCount) {
-      const range = sel.getRangeAt(0);
-      selectedText = range.toString();
-    }
-    // Insert an index entry marker
-    // Pattern: <span class="ref-index" data-entry="term">selected text</span>
-    const indexMarker = `<span class="ref-index">${selectedText || "Index Entry"}</span>`;
-    document.execCommand("insertHTML", false, indexMarker);
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const selectedText = range.toString();
+    // Direct DOM insertion (see insertCitation): execCommand insertHTML
+    // would drop the ref-index class from content-bearing markup.
+    const span = document.createElement("span");
+    span.className = "ref-index";
+    span.textContent = selectedText || "Index Entry";
+    range.deleteContents();
+    range.insertNode(span);
+    range.setStartAfter(span);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
     moveCaretPastStructuralMarkers();
     captureHistory();
     markDirty();
@@ -3858,6 +3875,7 @@
     inkCanvas.classList.add("drawing");
     inkCanvas.style.cursor = "default";
     setStatus("Ink select: click a stroke to select, drag to move, Delete to erase");
+    updateActiveStates();
   }
 
   // Delete/Backspace removes the selected stroke, Escape clears the
@@ -5359,16 +5377,108 @@
     }
   });
 
-  // --- plugins browser/manager dialogs -------------------------------
-  function browsePlugins() {
-    if (READ_ONLY) return;
-    setStatus("Browse plugins dialog would open here (plugins.browse)");
+  // --- plugins browser/manager dialogs (real plugin host) -----------
+  // /api/plugins returns the installed catalog (ocr, photoeditor). Browse
+  // lists it in a dialog; Manage adds a per-plugin enabled toggle persisted
+  // per-user in localStorage (a view preference — no document marker).
+  const pluginsDialog = document.getElementById("plugins-dialog");
+  const pluginsList = document.getElementById("plugins-list");
+
+  function closePluginsDialog() {
+    if (pluginsDialog) pluginsDialog.classList.remove("open");
+    restoreFocus();
   }
 
-  function managePlugins() {
-    if (READ_ONLY) return;
-    setStatus("Manage plugins dialog would open here (plugins.manage)");
+  async function _fetchPlugins() {
+    try {
+      const resp = await fetch("/api/plugins");
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      return Array.isArray(data.plugins) ? data.plugins : [];
+    } catch (err) {
+      return [];
+    }
   }
+
+  function _renderPluginsDialog(plugins, manage) {
+    if (!pluginsList) return;
+    pluginsList.innerHTML = "";
+    if (!plugins.length) {
+      const li = document.createElement("li");
+      li.className = "plugins-empty";
+      li.textContent = t("Plugins.None") || "No plugins installed";
+      pluginsList.appendChild(li);
+      return;
+    }
+    let enabled = {};
+    try {
+      enabled = JSON.parse(localStorage.getItem("wo.plugins.enabled") || "{}") || {};
+    } catch (err) { /* default: all enabled */ }
+    for (const p of plugins) {
+      const li = document.createElement("li");
+      li.className = "plugins-item";
+      const head = document.createElement("div");
+      head.className = "plugins-head";
+      const name = document.createElement("span");
+      name.className = "plugins-name";
+      name.textContent = p.name || p.id || "?";
+      head.appendChild(name);
+      if (p.version) {
+        const ver = document.createElement("span");
+        ver.className = "plugins-version";
+        ver.textContent = "v" + p.version;
+        head.appendChild(ver);
+      }
+      li.appendChild(head);
+      if (manage) {
+        const label = document.createElement("label");
+        label.className = "plugins-toggle";
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.dataset.plugin = p.id || p.name || "";
+        box.checked = enabled[box.dataset.plugin] !== false; // default enabled
+        box.addEventListener("change", (ev) => {
+          try {
+            const map = JSON.parse(localStorage.getItem("wo.plugins.enabled") || "{}") || {};
+            map[ev.target.dataset.plugin] = ev.target.checked;
+            localStorage.setItem("wo.plugins.enabled", JSON.stringify(map));
+          } catch (err) {}
+          setStatus(`Plugin ${ev.target.dataset.plugin} ${ev.target.checked ? "enabled" : "disabled"}`);
+        });
+        label.appendChild(box);
+        label.appendChild(document.createTextNode(" enabled"));
+        li.appendChild(label);
+      }
+      if (p.description) {
+        const desc = document.createElement("p");
+        desc.className = "plugins-desc";
+        desc.textContent = p.description;
+        li.appendChild(desc);
+      }
+      pluginsList.appendChild(li);
+    }
+  }
+
+  async function browsePlugins() {
+    if (READ_ONLY) return;
+    rememberFocus();
+    const plugins = await _fetchPlugins();
+    _renderPluginsDialog(plugins, false);
+    if (pluginsDialog) pluginsDialog.classList.add("open");
+    setStatus(`Plugins: ${plugins.length} installed`);
+  }
+
+  async function managePlugins() {
+    if (READ_ONLY) return;
+    rememberFocus();
+    const plugins = await _fetchPlugins();
+    _renderPluginsDialog(plugins, true);
+    if (pluginsDialog) pluginsDialog.classList.add("open");
+    setStatus(`Plugins: managing ${plugins.length} installed`);
+  }
+
+  const pluginsCloseBtn = document.getElementById("btn-plugins-close");
+  if (pluginsCloseBtn) pluginsCloseBtn.addEventListener("click", closePluginsDialog);
 
   loadDocument();
 })();
