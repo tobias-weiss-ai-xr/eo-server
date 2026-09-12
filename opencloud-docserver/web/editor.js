@@ -1264,7 +1264,23 @@
     lastFocusedEl = null;
     el.focus();
   }
-  const DIALOG_IDS = ["find-dialog", "table-dialog", "image-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog", "page-setup-dialog", "borders-dialog", "protect-dialog", "photo-editor-dialog"];
+  // Anchored insert popovers (table/image): sit under their ribbon button
+  // (OO dropdown shape), clamped to the viewport. Both are non-modal, so
+  // they are NOT in DIALOG_IDS (no modal Tab trap / overlay focus logic).
+  function anchorInsertPop(popId, triggerId) {
+    const pop = document.getElementById(popId);
+    const trig = document.getElementById(triggerId);
+    if (!pop || !trig) return;
+    const tr = trig.getBoundingClientRect();
+    const p = pop.getBoundingClientRect();
+    let left = tr.left;
+    let top = tr.bottom + 6;
+    if (left + p.width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - p.width - 8);
+    if (top + p.height > window.innerHeight - 8) top = Math.max(8, tr.top - p.height - 6);
+    pop.style.left = Math.round(left) + "px";
+    pop.style.top = Math.round(top) + "px";
+  }
+  const DIALOG_IDS = ["find-dialog", "link-dialog", "symbol-dialog", "table-ops-dialog", "version-history-dialog", "ai-review-dialog", "ai-propose-dialog", "page-setup-dialog", "borders-dialog", "protect-dialog", "photo-editor-dialog"];
   function getOpenDialog() {
     for (let i = 0; i < DIALOG_IDS.length; i++) {
       const d = document.getElementById(DIALOG_IDS[i]);
@@ -1321,6 +1337,7 @@
     saveTableSelection();
     rememberFocus();
     dialog.classList.add("open");
+    anchorInsertPop("table-dialog", "btn-table");
     colsInput.focus();
   }
 
@@ -1555,6 +1572,7 @@
     if (hIn) hIn.value = "";
     rememberFocus();
     dialog.classList.add("open");
+    anchorInsertPop("image-dialog", "btn-image");
     if (fileInput) fileInput.focus();
   }
 
@@ -4673,6 +4691,15 @@
     const imageDialog = document.getElementById("image-dialog");
     if (imageDialog && imageDialog.classList.contains("open")) closeImageDialog();
   }, true);
+
+  // Anchored insert popovers are non-modal: an outside mousedown dismisses
+  // them (same feel as OO's dropdowns), restoring the saved selection/focus.
+  document.addEventListener("mousedown", (ev) => {
+    const td = document.getElementById("table-dialog");
+    if (td && td.classList.contains("open") && !td.contains(ev.target)) closeTableDialog();
+    const id = document.getElementById("image-dialog");
+    if (id && id.classList.contains("open") && !id.contains(ev.target)) closeImageDialog();
+  });
 
   // ------------------------------------------------------------------
   // Keyboard shortcuts

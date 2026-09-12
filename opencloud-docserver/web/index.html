@@ -687,23 +687,24 @@
     <button type="button" role="menuitem" data-ctx="link" data-i18n="Ctx.Link">Link</button>
   </div>
 
-  <!-- Insert-table dialog (modal): rows/cols picked here, then a real
-       <table> is inserted at the saved cursor position. -->
-  <div id="table-dialog" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="table-dialog-title">
-    <div class="dialog">
-      <h3 id="table-dialog-title" data-i18n="Toolbar.InsertTable">Insert table</h3>
-      <div class="dialog-field">
-        <label for="table-rows" data-i18n="Table.Rows">Rows</label>
-        <input id="table-rows" type="number" min="1" max="20" value="2" inputmode="numeric">
-      </div>
-      <div class="dialog-field">
-        <label for="table-cols" data-i18n="Table.Columns">Columns</label>
-        <input id="table-cols" type="number" min="1" max="10" value="3" inputmode="numeric">
-      </div>
-      <div class="dialog-actions">
-        <button id="btn-table-cancel">Cancel</button>
-        <button id="btn-table-ok" class="primary">Insert</button>
-      </div>
+  <!-- Insert-table popover (anchored dropdown under the ribbon button, NOT a
+       full-screen modal): rows/cols picked here, then a real <table> is
+       inserted at the saved cursor position. Anchored like OO's insert
+       dropdown so the ribbon stays in context. All inner ids/handlers
+       unchanged (table-rows, table-cols, btn-table-ok...). -->
+  <div id="table-dialog" class="insert-pop" role="dialog" aria-modal="false" aria-labelledby="table-dialog-title">
+    <h3 id="table-dialog-title" data-i18n="Toolbar.InsertTable">Insert table</h3>
+    <div class="dialog-field">
+      <label for="table-rows" data-i18n="Table.Rows">Rows</label>
+      <input id="table-rows" type="number" min="1" max="20" value="2" inputmode="numeric">
+    </div>
+    <div class="dialog-field">
+      <label for="table-cols" data-i18n="Table.Columns">Columns</label>
+      <input id="table-cols" type="number" min="1" max="10" value="3" inputmode="numeric">
+    </div>
+    <div class="dialog-actions">
+      <button id="btn-table-cancel">Cancel</button>
+      <button id="btn-table-ok" class="primary">Insert</button>
     </div>
   </div>
 
@@ -735,31 +736,33 @@
        the saved cursor position. Nothing leaves the browser until the next
        save, when the server embeds data-URI images into the stored
        document (ODT: draw:frame/draw:image binaries). -->
-  <div id="image-dialog" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="image-dialog-title">
-    <div class="dialog">
-      <h3 id="image-dialog-title" data-i18n="Toolbar.InsertImage">Insert image</h3>
-      <div class="dialog-field">
-        <label for="image-file" data-i18n="Image.ChooseFile">Image file</label>
-        <input id="image-file" type="file"
-               accept="image/png,image/jpeg,image/gif,image/bmp,image/webp,image/svg+xml">
-      </div>
-      <div id="image-preview-wrap" class="image-preview-wrap" hidden>
-        <img id="image-preview" alt="">
-      </div>
-      <div class="dialog-field image-size-fields" hidden id="image-size-fields">
-        <label for="image-width" data-i18n="Image.Width">Width</label>
-        <input id="image-width" type="number" min="1" step="1" inputmode="numeric"
-               aria-label="Image width in pixels" placeholder="auto">
-        <label for="image-height" data-i18n="Image.Height">Height</label>
-        <input id="image-height" type="number" min="1" step="1" inputmode="numeric"
-               aria-label="Image height in pixels" placeholder="auto">
-        <span class="image-size-hint" data-i18n="Image.SizeHint">leave empty for original size</span>
-      </div>
-      <div id="image-error" class="image-error" role="alert"></div>
-      <div class="dialog-actions">
-        <button id="btn-image-cancel" data-i18n="Image.Cancel">Cancel</button>
-        <button id="btn-image-ok" class="primary" disabled data-i18n="Image.Insert">Insert</button>
-      </div>
+  <!-- Insert-image popover (anchored dropdown under the ribbon button, NOT a
+       full-screen modal): same file-preview-size flow as before, non-modal
+       so the document stays in context. Inner ids/handlers unchanged
+       (image-file, image-preview, btn-image-ok...). -->
+  <div id="image-dialog" class="insert-pop" role="dialog" aria-modal="false" aria-labelledby="image-dialog-title">
+    <h3 id="image-dialog-title" data-i18n="Toolbar.InsertImage">Insert image</h3>
+    <div class="dialog-field">
+      <label for="image-file" data-i18n="Image.ChooseFile">Image file</label>
+      <input id="image-file" type="file"
+             accept="image/png,image/jpeg,image/gif,image/bmp,image/webp,image/svg+xml">
+    </div>
+    <div id="image-preview-wrap" class="image-preview-wrap" hidden>
+      <img id="image-preview" alt="">
+    </div>
+    <div class="dialog-field image-size-fields" hidden id="image-size-fields">
+      <label for="image-width" data-i18n="Image.Width">Width</label>
+      <input id="image-width" type="number" min="1" step="1" inputmode="numeric"
+             aria-label="Image width in pixels" placeholder="auto">
+      <label for="image-height" data-i18n="Image.Height">Height</label>
+      <input id="image-height" type="number" min="1" step="1" inputmode="numeric"
+             aria-label="Image height in pixels" placeholder="auto">
+      <span class="image-size-hint" data-i18n="Image.SizeHint">leave empty for original size</span>
+    </div>
+    <div id="image-error" class="image-error" role="alert"></div>
+    <div class="dialog-actions">
+      <button id="btn-image-cancel" data-i18n="Image.Cancel">Cancel</button>
+      <button id="btn-image-ok" class="primary" disabled data-i18n="Image.Insert">Insert</button>
     </div>
   </div>
 

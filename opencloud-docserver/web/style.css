@@ -628,6 +628,31 @@ body {
 .menu-list[hidden],
 .menu-sublist[hidden] { display: none; }
 
+/* Anchored insert popovers (table / image): dropdown-class surfaces anchored
+   under their ribbon button — OO-parity interaction shape (compact, in
+   context) instead of a full-screen modal overlay. Positioned by
+   anchorInsertPop() in editor.js; closed on outside click / Escape. */
+.insert-pop {
+  position: fixed;
+  z-index: 90;
+  display: none;
+  min-width: 236px;
+  max-width: 300px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.insert-pop.open { display: block; }
+.insert-pop h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.insert-pop[hidden] { display: none; }
+
 .menu-list button,
 .menu-sublist button {
   display: block;
