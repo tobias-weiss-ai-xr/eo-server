@@ -116,7 +116,7 @@ def _is_safe_srcset(value: str) -> bool:
     return True
 
 
-def _escape_attr_value(value: str) -> str:
+def _escape_attr_value(value: str | None) -> str:
     """Escape an attribute value for safe re-emission.
 
     The parser decodes character references inside attribute values, so a
@@ -124,7 +124,12 @@ def _escape_attr_value(value: str) -> str:
     ``" onmouseover="alert(1)``. Re-encoding the quotes (& angle brackets)
     prevents the browser from re-parsing forged attributes or tags out of
     the sanitized output (attribute breakout / tag breakout).
+
+    ``None`` (valueless attributes the parser emits for malformed fragments
+    like ``<TD </p>``) is treated as empty — a None would otherwise crash
+    ``.replace`` and the sanitize_html safety-net would wipe the document.
     """
+    value = value or ""
     return (
         value.replace("&", "&amp;")
         .replace('"', "&quot;")
@@ -164,7 +169,11 @@ def _attrs_to_html(attrs) -> str:
         safe_attrs.append((name, value))
     # Every emitted value is escaped so decoded quotes/angle brackets in the
     # original input can never forge attributes or tags on re-parse.
-    return "".join(f' {name}="{_escape_attr_value(value)}"' for name, value in safe_attrs)
+    return "".join(
+        f' {name}="{_escape_attr_value(value)}"'
+        for name, value in safe_attrs
+        if value is not None  # valueless attrs from malformed fragments (None) are dropped
+    )
 
 
 def _sanitize_style(value: str) -> str | None:

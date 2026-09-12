@@ -438,3 +438,21 @@ def test_agent_malformed_html_does_not_crash_sanitizer():
                 pass
         except Exception as e:
             pytest.fail(f"Sanitizer crashed on malformed input {payload!r}: {e}")
+
+
+def test_valueless_attr_fragment_never_wipes_document():
+    """A malformed fragment like ``<TD </p>`` makes HTMLParser emit valueless
+    attributes as None ([('<', None), ('p', None)]). The escaper must not
+    crash on it — a crash used to fall through to the safety-net ``return ""``
+    and silently wipe the entire document (content-loss, not just XSS)."""
+    out = sanitize_html("<p><p>Existing content</p></p><p><TD </p>")
+    assert "Existing content" in out, f"document wiped: {out!r}"
+    assert "<td" in out
+    # vulnerable variant: hostile script + malformed fragment must strip
+    # the script yet keep the good text
+    hostile = "<script>alert(1)</script><p><TD <p>keep me</p>"
+    out2 = sanitize_html(hostile)
+    assert "keep me" in out2
+    assert "<script" not in out2.lower()
+    # idempotence (the sanitizer contract for repeated agent passes)
+    assert sanitize_html(out2) == out2
