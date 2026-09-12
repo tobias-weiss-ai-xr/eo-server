@@ -510,6 +510,24 @@ body {
 }
 .caret-btn:hover { background: var(--hover); }
 
+/* Styles dropdown trigger: OO-style labeled paragraph-styles picker, same
+   chrome as the toolbar selects so the ripple reads uniform on row A. */
+.toolbar .styles-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.toolbar .styles-trigger:hover,
+.toolbar .styles-trigger[aria-expanded="true"] { background: var(--hover); }
+
 /* Letter glyphs (B/I/U/S/SC/</>): uniform, intentional typography instead
    of default body text — same convention Word uses for inline glyphs. */
 .toolbar .rb-glyph { font-weight: 600; font-size: 12px; letter-spacing: 0.3px; }
