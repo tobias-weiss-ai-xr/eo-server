@@ -285,7 +285,7 @@
         <li role="none"><button type="button" role="menuitem" data-cmd="strikeDouble" data-i18n="Toolbar.StrikeDouble">Double strikethrough</button></li>
       </ul>
     </span>
-    <button class="rb" data-cmd="smallCaps" style="--rb-x: 448px" title="Small caps" data-i18n-title="Toolbar.SmallCapsTitle" aria-label="Small caps" data-i18n-aria-label="Toolbar.SmallCaps" aria-pressed="false">SC</button>
+    <button class="rb rb-glyph" data-cmd="smallCaps" style="--rb-x: 448px" title="Small caps" data-i18n-title="Toolbar.SmallCapsTitle" aria-label="Small caps" data-i18n-aria-label="Toolbar.SmallCaps" aria-pressed="false">SC</button>
     <span class="menu rb-menu" style="--rb-x: 468px">
       <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="Case options">▾</button>
       <ul class="menu-list" role="menu" hidden>
@@ -330,7 +330,7 @@
          menu can open it via showPicker() without another toolbar swatch.
          backColor with styleWithCSS applies background to the selection. -->
     <input type="color" id="shading-color" hidden value="#f4f4f4" aria-label="Paragraph shading">
-    <button class="rb" data-cmd="code" style="--rb-x: 609px; font-size: 10px" title="Inline code" data-i18n-title="Toolbar.CodeTitle" aria-label="Inline code" data-i18n-aria-label="Toolbar.Code" aria-pressed="false">&lt;/&gt;</button>
+    <button class="rb rb-glyph rb-glyph-code" data-cmd="code" style="--rb-x: 609px" title="Inline code" data-i18n-title="Toolbar.CodeTitle" aria-label="Inline code" data-i18n-aria-label="Toolbar.Code" aria-pressed="false">&lt;/&gt;</button>
     <span class="menu rb-menu" style="--rb-x: 628px">
       <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="Code style options">▾</button>
       <ul class="menu-list" role="menu" hidden>
@@ -356,8 +356,6 @@
     <button class="gallery-preset gp-h2 rb" style="--rb-x: 1066px; --rb-y: 43px" data-cmd="formatBlock" data-value="H2" title="Heading 2" aria-label="Heading 2 style"><span>Heading 2</span></button>
     <button class="gallery-preset gp-h3 rb" style="--rb-x: 1170px; --rb-y: 43px" data-cmd="formatBlock" data-value="H3" title="Heading 3" aria-label="Heading 3 style"><span>Heading 3</span></button>
     <span class="rb gal-sep" style="--rb-x: 1114px; --rb-y: 43px" aria-hidden="true"></span>
-    <button class="gallery-preset gp-strong rb" style="--rb-x: 1214px; --rb-y: 43px" data-cmd="bold" title="Strong" aria-label="Strong style" aria-pressed="false"><span class="gp-strong-s">S</span></button>
-    <button class="rb rb-flat" data-cmd="directionRtl" style="--rb-x: 1305px; --rb-y: 43px" title="Text direction" data-i18n-title="Toolbar.DirectionRtlTitle" aria-label="Text direction" data-i18n-aria-label="Toolbar.DirectionRtl" aria-pressed="false"><svg viewBox="0 0 10 12" width="10" height="12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 11 5 1l4 10M2.5 7.5h5"/></svg></button>
     <button id="btn-ribbon-collapse" class="rb rb-flat" style="--rb-x: 1355px; --rb-y: 43px; padding: 6px 8px" title="Show fewer toolbar buttons" data-i18n-title="Toolbar.CollapseTitle" aria-label="Show fewer toolbar buttons" data-i18n-aria-label="Toolbar.CollapseTitle" aria-expanded="true" aria-controls="ribbon-row-2"><svg viewBox="0 0 14 8" width="14" height="8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5 7 6 12.5 1.5"/></svg></button>
     <button class="rb" data-cmd="removeFormat" style="--rb-x: 1269px; --rb-y: 43px" title="Clear formatting" aria-label="Clear formatting">&#9001;&#9002;</button>
     </div>
@@ -372,7 +370,7 @@
     <button class="rb" data-cmd="justifyCenter" style="--rb-x: 195px" title="Center (Ctrl+E)" data-i18n-title="Toolbar.AlignCenterTitle" aria-label="Center" data-i18n-aria-label="Toolbar.AlignCenter" aria-pressed="false" aria-keyshortcuts="Control+E"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2.5 3.5h11M1.5 7h13M2.5 10.5h11M1.5 14h13"/></svg></button>
     <button class="rb" data-cmd="justifyRight" style="--rb-x: 223px" title="Align right (Ctrl+R)" data-i18n-title="Toolbar.AlignRightTitle" aria-label="Align right" data-i18n-aria-label="Toolbar.AlignRight" aria-pressed="false" aria-keyshortcuts="Control+R"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4.5 3.5h10M1.5 7h13M4.5 10.5h10M1.5 14h13"/></svg></button>
     <button class="rb" data-cmd="justifyFull" style="--rb-x: 251px" title="Justify (Ctrl+J)" data-i18n-title="Toolbar.AlignJustifyTitle" aria-label="Justify" data-i18n-aria-label="Toolbar.AlignJustify" aria-pressed="false" aria-keyshortcuts="Control+J"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 3.5h13M1.5 7h13M1.5 10.5h13M1.5 14h13"/></svg></button>
-    <button class="rb" data-cmd="insertUnorderedList" style="--rb-x: 279px" title="Bullet list (Ctrl+Shift+8)" data-i18n-title="Toolbar.BulletListTitle" aria-label="Bullet list" data-i18n-aria-label="Toolbar.BulletList" aria-pressed="false" aria-keyshortcuts="Control+Shift+8">&bull;&equiv;</button>
+    <button class="rb" data-cmd="insertUnorderedList" style="--rb-x: 279px" title="Bullet list (Ctrl+Shift+8)" data-i18n-title="Toolbar.BulletListTitle" aria-label="Bullet list" data-i18n-aria-label="Toolbar.BulletList" aria-pressed="false" aria-keyshortcuts="Control+Shift+8"><svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" stroke="none" aria-hidden="true"><circle cx="4" cy="4" r="1.4"/><circle cx="4" cy="8" r="1.4"/><circle cx="4" cy="12" r="1.4"/><path d="M7 4h7M7 8h7M7 12h7" stroke="currentColor" stroke-width="1.6"/></svg></button>
     <span class="menu rb-menu" style="--rb-x: 299px">
       <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="Bullet style options">▾</button>
       <ul class="menu-list" role="menu" hidden>
@@ -381,7 +379,7 @@
         <li role="none"><button type="button" role="menuitem" data-cmd="listStyle" data-value="square" data-i18n="Toolbar.BulletSquare">Square</button></li>
       </ul>
     </span>
-    <button class="rb" data-cmd="insertOrderedList" style="--rb-x: 321px" title="Numbered list (Ctrl+Shift+7)" data-i18n-title="Toolbar.NumberedListTitle" aria-label="Numbered list" data-i18n-aria-label="Toolbar.NumberedList" aria-pressed="false" aria-keyshortcuts="Control+Shift+7">1&equiv;</button>
+    <button class="rb" data-cmd="insertOrderedList" style="--rb-x: 321px" title="Numbered list (Ctrl+Shift+7)" data-i18n-title="Toolbar.NumberedListTitle" aria-label="Numbered list" data-i18n-aria-label="Toolbar.NumberedList" aria-pressed="false" aria-keyshortcuts="Control+Shift+7"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 2.5h2M3.5 4.5h1M4 6.5h.5M7 4h7M7 8h7M7 12h7"/><circle cx="4" cy="8" r="1.3" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg></button>
     <span class="menu rb-menu" style="--rb-x: 341px">
       <button type="button" class="menu-trigger caret-btn" aria-haspopup="true" aria-expanded="false" aria-label="Numbering style options">▾</button>
       <ul class="menu-list" role="menu" hidden>
@@ -391,7 +389,7 @@
         <li role="none"><button type="button" role="menuitem" data-cmd="listStyle" data-value="upper-alpha" data-i18n="Toolbar.NumberUpperAlpha">A. B. C.</button></li>
       </ul>
     </span>
-    <button class="rb rb-flat" data-cmd="insertUnorderedList" style="--rb-x: 362px" title="Multilevel list" data-i18n-title="Toolbar.MultilevelTitle" aria-label="Multilevel list" data-i18n-aria-label="Toolbar.Multilevel" aria-pressed="false"><svg viewBox="0 0 19 15" width="17" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 1.5v12.5M1.5 2.5h6M4.5 7.5h9M7.5 12.5h10"/><circle cx="16" cy="2.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="16.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/></svg></button>
+    <button class="rb rb-flat" data-cmd="multilevel" style="--rb-x: 362px" title="Multilevel list" data-i18n-title="Toolbar.MultilevelTitle" aria-label="Multilevel list" data-i18n-aria-label="Toolbar.Multilevel" aria-pressed="false"><svg viewBox="0 0 19 15" width="17" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 1.5v12.5M1.5 2.5h6M4.5 7.5h9M7.5 12.5h10"/><circle cx="16" cy="2.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="16.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/></svg></button>
     <button class="rb" data-cmd="indent" style="--rb-x: 568px" title="Increase indent" data-i18n-title="Toolbar.IndentTitle" aria-label="Increase indent" data-i18n-aria-label="Toolbar.Indent"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2.5v11M8.5 8H14.5M5 5.5 8 8l-3 2.5"/></svg></button>
     <button class="rb" data-cmd="outdent" style="--rb-x: 608px" title="Decrease indent" data-i18n-title="Toolbar.OutdentTitle" aria-label="Decrease indent" data-i18n-aria-label="Toolbar.Outdent"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2.5v11M1.5 8H8M11.5 5.5 8.5 8l3 2.5"/></svg></button>
     <span class="rb sep" style="--rb-x: 582px; background: #999; width: 3px" aria-hidden="true"></span>

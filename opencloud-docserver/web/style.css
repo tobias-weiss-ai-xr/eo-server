@@ -482,19 +482,42 @@ body {
   top: var(--rb-y, 50%);
   transform: translate(-50%, -50%);
 }
-/* two-class specificity: must beat .menu-trigger (defined later) */
+/* Ribbon split-button carets: real split-arrow buttons chained to their
+   command/select (matched height + hairlike divider), not slim 7px slivers.
+   The caret opens the adjacent .menu-list dropdown. */
 .toolbar .menu-trigger.caret-btn {
+  position: relative;
   border: none;
   background: none;
-  padding: 0 1px;
-  min-width: 0;
-  height: auto;
-  font-size: 9px;
-  line-height: 1;
+  padding: 0;
+  min-width: 22px;
+  height: 32px;
+  font-size: 10px;
+  line-height: 32px;
   color: var(--text);
   cursor: pointer;
+  border-radius: 6px;
+}
+.toolbar .menu-trigger.caret-btn::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--border);
+  opacity: 0.55;
 }
 .caret-btn:hover { background: var(--hover); }
+
+/* Letter glyphs (B/I/U/S/SC/</>): uniform, intentional typography instead
+   of default body text — same convention Word uses for inline glyphs. */
+.toolbar .rb-glyph { font-weight: 600; font-size: 12px; letter-spacing: 0.3px; }
+.toolbar .rb-glyph-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0;
+}
 .toolbar .rb-menu .menu-list { left: 0; min-width: 150px; }
 
 /* OO-golden sup/sub: one stacked split-button (sup ink line over sub). */
