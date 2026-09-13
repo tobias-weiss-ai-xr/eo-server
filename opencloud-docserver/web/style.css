@@ -833,7 +833,11 @@ select.sb#doc-lang option { color: var(--text); }
 }
 html.light .statusbar { background: #fdfdfd; }  /* OO golden: near-white bar */
 .statusbar .spacer { flex: 1; }
-#word-count { margin-left: 190px; }
+/* Left pad keeps the presence/status text group clear of the absolutely-
+   positioned word count at the OO-golden x=84 (collab chips are JS-inserted
+   before #status, so the pad must be the flow's first static child). */
+.statusbar .sb-leftpad { flex: 0 0 170px; }
+.statusbar #word-count.sb { white-space: nowrap; }
 .statusbar button {
   min-width: 24px;
   height: 22px;

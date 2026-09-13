@@ -588,13 +588,11 @@
        role=status + aria-live=polite: save/progress/error messages are
        announced to screen readers as they change. -->
   <footer class="statusbar">
-    <!-- Document language at the far-left OO-golden slot. Rendered as
-         letter-spaced fragments (data-slice into the option label) to match
-         the golden's tracking; updates with the select in JS. aria-hidden:
-         the select's aria-label already names the control. -->
-    <span id="doc-lang-label" aria-hidden="true"><b data-slice="0:5" style="left:11px;letter-spacing:1.1px"></b><b data-slice="5:6" style="left:46px"></b><b data-slice="6:7" style="left:58px"></b><b data-slice="8:10" style="left:84px"></b><b data-slice="10:15" style="left:109px;letter-spacing:1.75px"></b><b data-slice="16:23" style="left:146px;letter-spacing:.2px"></b></span>
-    <!-- Live word/character count, announced politely as it changes. -->
-    <span id="word-count" class="status-meta" role="status" aria-live="polite"></span>
+    <!-- Far-left slot = live word/character count at the OO-golden x=84
+         (OO: 'Words: 0' sits at the far left). The document language lives
+         once, over the right-hand select — no duplicate left label. -->
+    <span class="sb-leftpad" aria-hidden="true"></span>
+    <span id="word-count" class="sb status-meta" style="--sb-x: 84px" role="status" aria-live="polite"></span>
     <span id="status" class="status" role="status" aria-live="polite" data-i18n="Status.Ready">Ready</span>
     <!-- Offline indicator: shown (with the edit queue armed) whenever a save
          cannot reach the host; clears automatically on the next success. -->
@@ -622,8 +620,6 @@
     </select>
     <span id="doc-lang-label-right" aria-hidden="true"><b data-slice="0:7" style="left:944px"></b><b data-slice="8:15" style="left:982px"></b><b data-slice="16:23" style="left:1027px"></b></span>
     <button class="sb menu-trigger caret-btn" id="doc-lang-caret" style="--sb-x: 1080px" title="Language options" aria-label="Language options">▾</button>
-    <button class="sb sb-comments" style="--sb-x: 1383px" title="Toggle comments panel" aria-label="Toggle comments panel"><svg viewBox="0 0 18 14" width="18" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2h14v8h-7.5L5 13v-3H2z"/></svg></button>
-    <button class="sb sb-add-comment" style="--sb-x: 1417px" title="Add comment" aria-label="Add comment" aria-keyshortcuts="Control+Alt+M"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button>
   </footer>
 
   <!-- Right-click context menu (OO parity geometry). Honest subset: only
