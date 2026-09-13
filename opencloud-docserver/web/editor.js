@@ -664,17 +664,32 @@
   // remove ``style="direction:rtl"``. Both converters round-trip the
   // property (DOCX w:bidi / ODF style:writing-mode) and the sanitizer's
   // style whitelist keeps ``direction`` on save.
+  function blocksUnderSelection(sel) {
+    // Shared block resolver for block-level commands (line spacing, RTL
+    // direction). select-all yields startContainer === editor so the walk
+    // below finds nothing; fall back to every top-level block then — the
+    // select-all intent is "apply to the whole document".
+    const range = sel.getRangeAt(0);
+    const blocks = [];
+    [range.startContainer, range.endContainer].forEach((node) => {
+      const b = blockElementAt(node);
+      if (b && b !== editor && blocks.indexOf(b) === -1) blocks.push(b);
+    });
+    if (blocks.length === 0 && sel.isCollapsed === false && range.startContainer === editor) {
+      for (const b of editor.children) {
+        if (blockElementAt(b) === b && b !== editor) blocks.push(b);
+      }
+    }
+    return blocks;
+  }
+
   function toggleBlockDirection() {
     if (READ_ONLY) return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0);
     if (!editor.contains(range.startContainer)) return;
-    const blocks = [];
-    [range.startContainer, range.endContainer].forEach((node) => {
-      const b = blockElementAt(node);
-      if (b && b !== editor && blocks.indexOf(b) === -1) blocks.push(b);
-    });
+    const blocks = blocksUnderSelection(sel);
     if (blocks.length === 0) return;
     const anyRtl = blocks.some((b) => b.style.direction === "rtl");
     blocks.forEach((el) => {
@@ -688,6 +703,14 @@
   }
 
   function runCommand(cmd, value) {
+    // Loud guard: with restrict-editing on (contentEditable off) the
+    // execCommand-based mutations silently fail — say so instead (the
+    // protection controls themselves must stay reachable to un-restrict).
+    const editBlocked = () => {
+      if (editor.contentEditable !== "false") return false;
+      setStatus(t("Status.NotAvailable") + " " + cmd, true);
+      return true;
+    };
     if (cmd === "insertUnorderedList" || cmd === "insertOrderedList") {
       toggleList(cmd);
       return;
@@ -859,6 +882,7 @@
     if (cmd === "insertPageNumber") {
       // PAGE-field authoring (F-085): the span the converters map to
       // w:fldSimple PAGE / text:page-number.
+      if (editBlocked()) return;
       try { document.execCommand("insertHTML", false, '<span class="page-number"></span>'); } catch (err) {}
       markDirty();
       captureHistory();
@@ -892,6 +916,14 @@
       return;
     }
     if (cmd === "insertSymbol" || cmd === "insertDate") {
+      if (editBlocked()) return;
+      // execCommand("insertText") needs editable focus; if the click left
+      // focus on the ribbon button it silently fails — restore the editor
+      // (and with it the caret) first.
+      if (document.activeElement !== editor) {
+        editor.focus();
+        if (window.getSelection().isCollapsed) restoreFocus();
+      }
       // Never let a symbol/date-land inside an <hr> or page-break marker
       // whose caret Chromium re-restored on focus.
       moveCaretPastStructuralMarkers();
@@ -992,6 +1024,18 @@
     if (isSpanStyle) {
       try { document.execCommand("styleWithCSS", false, "true"); } catch (err) { /* best effort */ }
     }
+    // Loud-stub doctrine at the root: any command that reaches this
+    // fallthrough but is not a real browser execCommand (e.g. a stubbed
+    // ribbon button) must SAY so instead of failing silently — silent
+    // no-ops read as "the app is broken".
+    let supported = false;
+    if (editBlocked()) return;
+    try { supported = document.queryCommandSupported(cmd); } catch (err) { /* some engines throw on odd names */ }
+    if (!supported) {
+      setStatus(t("Status.NotAvailable") + " " + cmd, true);
+      console.warn("wo: command not available:", cmd);
+      return;
+    }
     document.execCommand(cmd, false, isBlock ? String(value).toLowerCase() : value || null);
     if (isSpanStyle) {
       try { document.execCommand("styleWithCSS", false, "false"); } catch (err) { /* best effort */ }
@@ -1055,11 +1099,7 @@
     if (!sel || sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0);
     if (!editor.contains(range.startContainer)) return;
-    const blocks = [];
-    [range.startContainer, range.endContainer].forEach((node) => {
-      const b = blockElementAt(node);
-      if (b && b !== editor && blocks.indexOf(b) === -1) blocks.push(b);
-    });
+    const blocks = blocksUnderSelection(sel);
     if (blocks.length === 0) return;
     const css = parseFloat(String(value));
     const clear = !(css > 0) || css === 1; // "" or "1" -> reset to default
@@ -3476,10 +3516,15 @@
     const sel = document.getSelection();
     if (!sel || !sel.rangeCount) return;
     const sc = sel.getRangeAt(0).startContainer;
-    const p = sc.nodeType === 1
+    let p = sc.nodeType === 1
       ? (sc.closest ? sc.closest("p") : null)
       : (sc.parentElement && sc.parentElement.closest("p"));
-    if (!p) return;
+    if (!p) {
+      // select-all / whole-editor selection: fall back to the first
+      // paragraph so dropcap still applies (parity with blocksUnderSelection).
+      if (editor.contains(sc)) p = editor.querySelector("p");
+      if (!p) return;
+    }
     const existing = p.querySelector(":scope > span.dropcap");
     if (existing) {
       existing.remove();
