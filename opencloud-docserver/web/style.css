@@ -2,6 +2,7 @@
  * Stoic: minimal, functional, no frameworks. */
 
 :root {
+  color-scheme: dark; /* themes native widgets: select popups, range fill */
   --bg: #1e1e28;
   --surface: #2a2a3a;
   --border: #3a3a4e;
@@ -21,6 +22,7 @@
 /* Light palette mirrors the OnlyOffice light golden (visual-rig B-layer):
    chrome #f2f2f2, hairlines #e1e1e1, icons #383838, accent rgb(55,96,146). */
 html.light {
+  color-scheme: light;
   --bg: #f3f3f3;
   --surface: #f2f2f2;
   --border: #e1e1e1;
@@ -297,6 +299,10 @@ body {
 
 .toolbar .toolbar-select:focus { outline: 1px solid var(--accent); border-color: transparent; }
 .toolbar .toolbar-select:disabled { opacity: 0.45; cursor: default; }
+/* Native option lists (font family/size, spacing, doc language…) render
+   OS-light by default — white popups on dark chrome. color-scheme on the
+   root themes them natively; the option rule covers the popup items. */
+select option { background: var(--bg); color: var(--text); }
 
 /* Font size is narrow; family and spacing get a bit more room */
 #font-size { width: 58px; max-width: 58px; }
@@ -863,29 +869,14 @@ html.light .statusbar { background: #fdfdfd; }  /* OO golden: near-white bar */
   border-radius: 3px;
   background: var(--bg);
 }
-/* Styled range: dark end caps + thumb → reads like the OO zoom slider */
+/* Zoom slider: single native rendering via accent-color — the fill MOVES
+   with the value and follows the theme. (Replaced the static OO-mimicry
+   gradient: it looked right at 100% only and never moved — "2 bars".) */
 .zoom-slider {
   width: 70px;
-  -webkit-appearance: none;
-  appearance: none;
   height: 18px;
-  background: transparent;
+  accent-color: var(--accent);
   cursor: pointer;
-}
-/* OO's slider reads as: dark start box, light gap, filled segment, light gap,
-   small dark thumb near the right end. */
-.zoom-slider::-webkit-slider-runnable-track {
-  height: 12px;
-  border-radius: 2px;
-  background: linear-gradient(90deg,
-    #6b6b6b 0 20px, #d9d9d9 20px 31px, #6b6b6b 31px 51px,
-    #d9d9d9 51px 65px, #6b6b6b 65px 70px);
-}
-.zoom-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 8px;
-  height: 12px;
-  background: transparent; /* the track gradient carries OO's look */
 }
 .offline-indicator {
   font-size: 12px;
